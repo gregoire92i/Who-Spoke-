@@ -1,0 +1,12 @@
+#environnement virtuel Python
+.venv/
+
+#fichiers Python temporaires
+__pycache__/
+*.pyc
+
+#données : corpus et audio (licences, taille)
+data/
+*.wav
+*.mp3
+*.flac
