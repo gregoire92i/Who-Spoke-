@@ -1,2 +1,2 @@
-#« Who Spoke? »
+# "Who Spoke?"
 ## un système d’intelligence artificielle capable d’identifier les différents locuteurs d’un enregistrement audio et de déterminer leurs temps de parole. De la recherche de datasets à l’exploration des modèles de deep learning, en devellopant notre propre pipeline de diarisation, compare les technologies existantes et réalise une démonstration fonctionnelle.
