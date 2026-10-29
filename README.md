@@ -40,32 +40,6 @@ pip install -r requirements.txt
 Non redistribuées (droits d'auteur des vidéos). À télécharger dans `data/` (exclu par `.gitignore`) :
 
 VoxConverse est distribué sous licence CC BY 4.0. Si vous l'utilisez, citez :
-```bibtex
-@InProceedings{Chung20,
-                author       = "Joon~Son Chung and Jaesung Huh and Arsha Nagrani and Triantafyllos Afouras and Andrew Zisserman",
-                title        = "Spot the conversation: speaker diarisation in the wild",
-                booktitle    = "INTERSPEECH",
-                year         = "2020",
-              }
-```
-
-Audio : page de téléchargement hébergée par le laboratoire de J. S. Chung (KAIST), <https://mm.kaist.ac.kr/datasets/voxconverse/>.
-Annotations RTTM v0.3 : <https://github.com/joonson/voxconverse> (branche `master`).
-
-```bash
-mkdir -p data/voxconverse && cd data/voxconverse
-wget -c https://mm.kaist.ac.kr/datasets/voxconverse/data/voxconverse_dev_wav.zip
-wget -c https://mm.kaist.ac.kr/datasets/voxconverse/data/voxconverse_test_wav.zip
-md5sum -c <<EOF
-2a6e07e7473d9841abb132554a698a36  voxconverse_dev_wav.zip
-834558bbd9b1ffd2d4893181556ceddd  voxconverse_test_wav.zip
-EOF
-unzip -q voxconverse_dev_wav.zip  -d dev
-unzip -q voxconverse_test_wav.zip -d test
-git clone --depth 1 https://github.com/joonson/voxconverse.git annotations
-```
-
-VoxConverse est distribué sous licence CC BY 4.0. Si vous l'utilisez, citez :
 
 > J. S. Chung, J. Huh, A. Nagrani, T. Afouras, A. Zisserman. *Spot the conversation: speaker diarisation in the wild*. Interspeech, 2020. [arXiv:2007.01216](https://arxiv.org/abs/2007.01216)
 
@@ -78,12 +52,20 @@ VoxConverse est distribué sous licence CC BY 4.0. Si vous l'utilisez, citez :
 }
 ```
 
+Audio : page de téléchargement hébergée par le laboratoire de J. S. Chung (KAIST), <https://mm.kaist.ac.kr/datasets/voxconverse/>.
+Annotations RTTM v0.3 : <https://github.com/joonson/voxconverse> (branche `master`).
+
+À executer dans le dossier de votre projet pour telecharger directement le dataset :
 
 ```bash
 mkdir -p data/voxconverse && cd data/voxconverse
-wget -c https://www.robots.ox.ac.uk/~vgg/data/voxconverse/data/voxconverse_dev_wav.zip
-wget -c https://www.robots.ox.ac.uk/~vgg/data/voxconverse/data/voxconverse_test_wav.zip
+wget -c https://mm.kaist.ac.kr/datasets/voxconverse/data/voxconverse_dev_wav.zip
+wget -c https://mm.kaist.ac.kr/datasets/voxconverse/data/voxconverse_test_wav.zip
+md5sum -c <<EOF
+2a6e07e7473d9841abb132554a698a36  voxconverse_dev_wav.zip
+834558bbd9b1ffd2d4893181556ceddd  voxconverse_test_wav.zip
+EOF
 unzip -q voxconverse_dev_wav.zip  -d dev
 unzip -q voxconverse_test_wav.zip -d test
-git clone --depth 1 https://github.com/joonson/voxconverse.git annotations   # RTTM v0.3
+git clone --depth 1 https://github.com/joonson/voxconverse.git annotations
 ```
