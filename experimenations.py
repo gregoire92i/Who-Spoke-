@@ -1,6 +1,7 @@
 import librosa, librosa.display, soundfile as sf
 import numpy as np
 import matplotlib.pyplot as plt
+from pyannote.database.util import load_rttm
 
 
 #parameters
@@ -78,3 +79,8 @@ fig1.colorbar(spectro1, ax=axes1[1], format="%+2.0f dB")
 axes1[1].set(title="Spectrogramme")
 plt.tight_layout()#ajuste les marges pour eviter les chevauchements
 plt.savefig("figures/waveform1.png")
+
+
+annot=load_rttm("data/voxconverse/annotations/dev/abjxc.rttm")["abjxc"]
+print(annot)
+print(annot.label_duration("spk00"))
