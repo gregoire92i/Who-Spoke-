@@ -18,6 +18,7 @@ def save_frise_rttm(annotation_):
     plt.close(fig)#libère memory
 
 #tests
-test=load_file_annotations("zmndm.rttm")
+test=load_file_annotations("zyffh.rttm")
 print(test)
+notebook.crop = Segment(t1, t2)
 save_frise_rttm(test)
