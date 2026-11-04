@@ -25,6 +25,36 @@ Compléter l’évaluation par des enregistrements maison jamais publiés.
 - Cause trouvée : l'archive de test contient un dossier `__MACOSX/` (métadonnées ajoutées quand un zip est créé sur Mac). Il contient 232 fichiers `._nom.wav` qui ne sont pas des enregistrements, mais que `find -name "*.wav"` compte. 232 vrais fichiers (dans `voxconverse_test_wav/`) + 232 faux = 464.
 - Hypothèse écartée : un double dézippage
 
-### Réparition dev/test sur voxconverse
+## Réparition dev/test sur voxconverse
 
 Les deux ensembles ne se ressemblent pas tout à fait (chiffres des auteurs). Le test a plus de locuteurs par fichier (6,5 contre 4,5 en moyenne) et des fichiers deux fois plus longs (11,3 min contre 5,6 min)
+
+### conclusions de data vizualization 
+
+Quelques outliers, on verra ce qu'on en fait après avoir fini d'établir la baseline
+
+## Décisions d'évaluation
+Pour l'instant :
+on fixe le collar=0ms convention NIST -> eviter de penaliser les imprecisions de notation -> porbleme : maj du collar à 0 pour pouvoir comparzer aux modeles pyannote
+- DER qui compte les overlap (approche moderne) -> metrique principale
+- DER sans les overlap (approche ancienne "forgiving")
+- JER
+|-> comparer les deux -> pour la baseline surtout.
+UEM = [0, durée réelle de l'audio]
+agrégation de plusieurs fichiers -> micro, car plus représentatif.
+
+### Metriques pour la detection de parole seule
+
+- detection error=(FA+MISS)/speaking duration
+
+### Evaluation du clustering
+A cofnirmer plus tard : 
+- Purity ->Chaque cluster du système contient-il un seul vrai locuteur ? - equivalent to accuracy
+- Coverage -> Chaque vrai locuteur est-il rassemblé dans un seul cluster ? -> equivalent to recall ? -> CHECK - OK
+- Speaker count error -> Écart entre nombre de locuteurs prédit et réel
+
+### Mesure des Couts de calcul
+- RTF (Real-Time Factor) = temps de traitement / durée de l'audio -> si =1 -> audio traité aussi vite que sa durée reelle 
+### Sanity checks
+- ref vs ref
+- one speaker partout -> DER de reference

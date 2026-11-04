@@ -116,10 +116,10 @@ def get_representative_sample(folder_path,wav_folder,sample_size,all=False,seed=
     return sample_annotations
 
     
-
-sample = get_representative_sample("data/voxconverse/annotations/dev", "data/voxconverse/dev/audio", 40)
-print(len(sample))
-print(sample)
+# ###TESTS###
+# sample = get_representative_sample("data/voxconverse/annotations/dev", "data/voxconverse/dev/audio", 40)
+# print(len(sample))
+# print(sample)
 
 #tests
 # test=load_file_annotations("zyffh.rttm")

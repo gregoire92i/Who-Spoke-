@@ -178,3 +178,41 @@ def main():
  
 if __name__ == "__main__":
     main()
+
+
+
+
+###### SAMPLE vs DEV ######
+
+SAMPLE_RTTM_DIR = "data/voxconverse/annotations/dev"
+SAMPLE_WAV_DIR = "data/voxconverse/dev/audio"
+SAMPLE_SIZE = 100
+sample_seed=42
+
+
+def plot_sample_vs_dev(sample_ids):
+    """Same figures as main(), but comparing the full dev set with the sample (sample files are also in dev)."""
+    global SPLITS
+    stats_table = pd.read_csv(FIGURE_DIR / "voxconverse_file_stats.csv")  # written by main()
+    dev_table = stats_table[stats_table["split"] == "dev"]
+    sample_table = dev_table[dev_table["file_id"].isin(sample_ids)].copy()
+    sample_table["split"] = "sample"
+    print(f"sample: {len(sample_table)} files found in dev (expected {len(sample_ids)})")
+    comparison_table = pd.concat([dev_table, sample_table])
+
+    saved_splits = SPLITS
+    SPLITS = ["dev", "sample"]  # the plot functions loop over SPLITS
+    SPLIT_COLORS["sample"] = "tab:green"
+    try:
+        plot_distributions(comparison_table, FIGURE_DIR / "sample_vs_dev_distributions.png")
+        plot_pair_grid(comparison_table, FIGURE_DIR / "sample_vs_dev_pair_grid.png")
+    finally:
+        SPLITS = saved_splits
+    print(comparison_table.groupby("split")[list(METRICS)].describe().T.round(2))
+    print(f"saved: 2 figures sample_vs_dev_*.png in {FIGURE_DIR}/")
+
+
+if __name__ == "__main__":
+    from rttm_files import get_representative_sample
+    sample = get_representative_sample(SAMPLE_RTTM_DIR, SAMPLE_WAV_DIR, SAMPLE_SIZE,seed=sample_seed)
+    plot_sample_vs_dev(list(sample))
