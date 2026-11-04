@@ -21,7 +21,7 @@ Format d'une entrée :
 
 Les champs marqués *à compléter* n'ont pas été notés au moment de la décision.
 
-⚠️ Deux décisions sont **recopiées intégralement** depuis d'autres fichiers :
+Deux décisions sont **recopiées intégralement** depuis d'autres fichiers :
 
 - D-10, recopiée depuis `docs/decision_corpus.md` ;
 - D-30 à D-37, recopiées depuis le fichier « Décisions d'évaluation ».

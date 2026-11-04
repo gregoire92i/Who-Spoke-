@@ -2,13 +2,16 @@ import librosa, librosa.display, soundfile as sf
 import numpy as np
 import matplotlib.pyplot as plt
 from pyannote.database.util import load_rttm
+from rttm_files import load_file_annotations
 
 
 #parameters
 sr=16000#frequence d'echantillonage
-frame_size=64
-hop_size=10
-
+frame_size=64#en ms
+hop_size=10#en ms
+#conversion en nombre/s
+frame_size=int(frame_size*(sr/1000))
+hop_size=int(hop_size*(sr/1000))
 
 #charger la data
 def load_audio (path,sr):
@@ -19,11 +22,14 @@ def load_audio (path,sr):
 def FFT(signal_audio,frame_size=frame_size,hop_size=hop_size):
     """#fait la tranformée de fourier rapide du signal, paramètres en ms"""
     signal_audio=signal_audio#car stft prend en parametres le nombre d'echantillons par trame
-    frame_size=frame_size*16
-    hop_size=hop_size*16
     hann_size=frame_size# on veut que recouvrir exactement la frame
     FFT_output=librosa.stft(signal_audio,n_fft=frame_size,hop_length=hop_size,win_length=hann_size)
     return FFT_output
+
+#calcul RMS : energie de chaque trame pour le seuil de parole VAD
+def RMS_on_FFT(FFT_output,frame_size=frame_size):
+    rms=librosa.feature.rms(S=np.abs(FFT_output),frame_length=frame_size)
+    return rms
 
 
 # #echantillonage
@@ -58,30 +64,44 @@ def FFT(signal_audio,frame_size=frame_size,hop_size=hop_size):
 # ######################
 # #FICHIER2#
 
-# #echantillonage
-# audio1=load_audio("data/enregistrement.wav", sr)
+#echantillonage
+audio1=load_audio("data/voxconverse/dev/audio/ysgbf.wav", sr)
 
-# #graphique
-# fig1, axes1 = plt.subplots(nrows=2, ncols=1, figsize=(12, 6),sharex=True)# nrows le nombre de ligne ncols colonne donc -> nbr de graphiques dans la figure=nrows*ncols
-# librosa.display.waveshow(audio1,sr=sr,ax=axes1[0])
-# axes1[0].set(title="Forme d'onde")
+#graphique
+fig1, axes1 = plt.subplots(nrows=3, ncols=1, figsize=(12, 6),sharex=True)# nrows le nombre de ligne ncols colonne donc -> nbr de graphiques dans la figure=nrows*ncols
+librosa.display.waveshow(audio1,sr=sr,ax=axes1[0])
+axes1[0].set(title="Forme d'onde")
 
-# #trames et FFT
-# D1=FFT(audio1)
-# print(D1.shape)
+#trames et FFT
+D1=FFT(audio1)
+print(D1.shape)
+#VAD
+rms=RMS_on_FFT(D1)
 
-# #spectrogramme
-# S_db1 = librosa.amplitude_to_db(np.abs(D1), ref=np.max)#amplitude to db convertit en db, np.abs prend le module de D (complexe->reel), ref est valeur de ref (à l'origine ?)np.max prend la val max du spectrogramme --> important pour comparer diff fichiers entre eux qui n'ont pas dutout le meme volume
+#spectrogramme
+S_db1 = librosa.amplitude_to_db(np.abs(D1), ref=np.max)#amplitude to db convertit en db, np.abs prend le module de D (complexe->reel), ref est valeur de ref (à l'origine ?)np.max prend la val max du spectrogramme --> important pour comparer diff fichiers entre eux qui n'ont pas dutout le meme volume
 
-# #graphique
-# spectro1 = librosa.display.specshow(S_db1, sr=sr, hop_length=hop_size*16, x_axis="time", y_axis="hz", ax=axes1[1])
-# fig1.colorbar(spectro1, ax=axes1[1], format="%+2.0f dB")
-# axes1[1].set(title="Spectrogramme")
-# plt.tight_layout()#ajuste les marges pour eviter les chevauchements
-# plt.savefig("figures/waveform1.png")
+#graphique rms
+times = librosa.times_like(rms, sr=sr, hop_length=hop_size)
+rms_db = librosa.amplitude_to_db(rms, ref=np.max)
+axes1[1].plot(times, rms_db[0])
+X=22
+axes1[1].axhline(-X, color="red", linestyle="--")# marge du seuil en dB
+axes1[1].set(title="energie")
+ref=load_file_annotations("ysgbf.rttm")
+for seg in ref.get_timeline().support():
+       axes1[1].axvspan(seg.start, seg.end, alpha=0.2, color="green")
+
+#graphique spectrogramme
+spectro1 = librosa.display.specshow(S_db1, sr=sr, hop_length=hop_size, x_axis="time", y_axis="hz", ax=axes1[2])
+fig1.colorbar(spectro1, ax=axes1[2], format="%+2.0f dB")
+axes1[2].set(title="Spectrogramme")
+plt.tight_layout()#ajuste les marges pour eviter les chevauchements
+plt.savefig("figures/waveform1.png")
 
 
-# annot=load_rttm("data/voxconverse/annotations/dev/abjxc.rttm")["abjxc"]
-# print(annot)
-# print(annot.label_duration("spk00"))
 
+
+annot=load_rttm("data/voxconverse/annotations/dev/abjxc.rttm")["abjxc"]
+print(annot)
+print(annot.label_duration("spk00"))

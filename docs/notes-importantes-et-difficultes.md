@@ -32,6 +32,7 @@ Les deux ensembles ne se ressemblent pas tout à fait (chiffres des auteurs). Le
 ### conclusions de data vizualization 
 
 Quelques outliers, on verra ce qu'on en fait après avoir fini d'établir la baseline
+- **Locuteurs récurrents (VoxConverse)** : aucune source (article Chung et al. 2020, rapports VoxSRC 2020/2021, rétrospective 2024) ne dit si une même personne apparaît dans plusieurs fichiers, ni entre dev et test. Les étiquettes RTTM v0.3 sont locales à chaque fichier (vérifié : 20 étiquettes distinctes dans tout le dev, 21 dans le test), et les auteurs ont dédoublonné les vidéos, pas les personnes. Question ouverte, vérifiable seulement par comparaison d'embeddings entre fichiers. Impact négligeable pour la baseline (aucun entraînement) ; à vérifier avant tout fine-tuning sur le dev en semaine 2.
 
 ## Décisions d'évaluation
 Pour l'instant :
