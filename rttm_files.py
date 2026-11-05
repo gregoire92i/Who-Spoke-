@@ -6,11 +6,38 @@ import matplotlib.pyplot as plt#affichage
 import pandas as pd
 from scipy.stats import ks_2samp
 import soundfile as sf
+import random
+import soundfile
+from pyannote.database.util import load_rttm
 
 def load_file_annotations(rttm_file):
-    file=Path(rttm_file)
-    annotation=load_rttm(Path("data/voxconverse/annotations/dev") / file)[file.stem]
+    rttm_file=Path(rttm_file)
+    annotation=load_rttm(rttm_file)[rttm_file.stem]
     return annotation
+
+def load_audios_from_annotation(annotation_, sr, audio_dir, ext=".wav"):
+    "takes an annotation of audios in parameters, return a dico_audio[stem]=audio_content"
+    from experimenations import load_audio
+
+    # Un Annotation seul -> on le met dans un dict pour traiter les deux cas pareil
+    if not isinstance(annotation_, dict):
+        annotation_ = {annotation_.uri: annotation_}
+
+    audio_dir = Path(audio_dir)
+    dico_audio = {}
+    missing = []
+
+    for stem in annotation_:              # uri RTTM = nom du fichier sans extension
+        path = audio_dir / f"{stem}{ext}"
+        if not path.exists():
+            missing.append(stem)
+            continue
+        dico_audio[stem] = load_audio(str(path), sr)
+
+    if missing:
+        print(f"[warning] {len(missing)} audio(s) introuvable(s) : {missing}")
+
+    return dico_audio
 
 
 #graphique
@@ -20,10 +47,6 @@ def save_frise_rttm(annotation_):
     fig.savefig("figures/frise.png", bbox_inches="tight")
     plt.close(fig)#libère memory
 
-from pathlib import Path
-import random
-import soundfile
-from pyannote.database.util import load_rttm
 
 
 def get_representative_sample(folder_path,wav_folder,sample_size,all=False,seed=130):
@@ -173,92 +196,92 @@ def save_sample_rttm(sample, output_path, split_files=False):
     return written_files
 
 
-############TESTS BY CLAUDE###############
+# ############TESTS BY CLAUDE###############
 
-RTTM_DIR = Path("data/voxconverse/annotations/dev")
-WAV_DIR = Path("data/voxconverse/dev/audio")
-OUT_CSV = Path("figures/sample_vs_dev_smd_ks.csv")
-SAMPLE_SIZE = 90
+# RTTM_DIR = Path("data/voxconverse/annotations/dev")
+# WAV_DIR = Path("data/voxconverse/dev/audio")
+# OUT_CSV = Path("figures/sample_vs_dev_smd_ks.csv")
+# SAMPLE_SIZE = 90
 
-SEED = 130
+# SEED = 130
  
-# Variables utilisées par la stratification (équilibrées par construction)
-STRATIFIED = ["n_speakers", "overlap_rate", "speech_ratio"]
-# Variables NON utilisées par la stratification (le vrai test)
-OTHERS = ["duration", "n_segments", "mean_segment"]
+# # Variables utilisées par la stratification (équilibrées par construction)
+# STRATIFIED = ["n_speakers", "overlap_rate", "speech_ratio"]
+# # Variables NON utilisées par la stratification (le vrai test)
+# OTHERS = ["duration", "n_segments", "mean_segment"]
  
-SMD_THRESHOLD = 0.1  # repère usuel : |SMD| < 0.1 = bon équilibre
- 
- 
-def compute_file_stats(stem, annotation, wav_dir=WAV_DIR):
-    """Statistiques d'un fichier, à partir de son Annotation de référence et de son .wav."""
-    duration = sf.info(str(wav_dir / f"{stem}.wav")).duration
-    speech = annotation.get_timeline().support().duration()
-    overlap = annotation.get_overlap().duration()
-    seg_durations = [seg.duration for seg, _ in annotation.itertracks()]
-    return {
-        "file": stem,
-        "n_speakers": len(annotation.labels()),
-        "overlap_rate": overlap / speech if speech > 0 else 0.0,
-        "speech_ratio": speech / duration,
-        "duration": duration,
-        "n_segments": len(seg_durations),
-        "mean_segment": float(np.mean(seg_durations)) if seg_durations else 0.0,
-    }
+# SMD_THRESHOLD = 0.1  # repère usuel : |SMD| < 0.1 = bon équilibre
  
  
-def build_dev_table(rttm_dir=RTTM_DIR, wav_dir=WAV_DIR):
-    """DataFrame des stats de tous les fichiers du dev (une ligne par fichier)."""
-    rows = []
-    for path in sorted(rttm_dir.glob("*.rttm")):
-        annotation = next(iter(load_rttm(str(path)).values()))
-        rows.append(compute_file_stats(path.stem, annotation, wav_dir))
-    return pd.DataFrame(rows)
+# def compute_file_stats(stem, annotation, wav_dir=WAV_DIR):
+#     """Statistiques d'un fichier, à partir de son Annotation de référence et de son .wav."""
+#     duration = sf.info(str(wav_dir / f"{stem}.wav")).duration
+#     speech = annotation.get_timeline().support().duration()
+#     overlap = annotation.get_overlap().duration()
+#     seg_durations = [seg.duration for seg, _ in annotation.itertracks()]
+#     return {
+#         "file": stem,
+#         "n_speakers": len(annotation.labels()),
+#         "overlap_rate": overlap / speech if speech > 0 else 0.0,
+#         "speech_ratio": speech / duration,
+#         "duration": duration,
+#         "n_segments": len(seg_durations),
+#         "mean_segment": float(np.mean(seg_durations)) if seg_durations else 0.0,
+#     }
  
  
-def smd(sample_values, dev_values):
-    sd = dev_values.std(ddof=1)
-    return (sample_values.mean() - dev_values.mean()) / sd if sd > 0 else 0.0
+# def build_dev_table(rttm_dir=RTTM_DIR, wav_dir=WAV_DIR):
+#     """DataFrame des stats de tous les fichiers du dev (une ligne par fichier)."""
+#     rows = []
+#     for path in sorted(rttm_dir.glob("*.rttm")):
+#         annotation = next(iter(load_rttm(str(path)).values()))
+#         rows.append(compute_file_stats(path.stem, annotation, wav_dir))
+#     return pd.DataFrame(rows)
  
  
-def compare_sample_to_dev(df_dev, sample_stems):
-    in_sample = df_dev["file"].isin(sample_stems)
-    s, comp = df_dev[in_sample], df_dev[~in_sample]
-    rows = []
-    for var in STRATIFIED + OTHERS:
-        ks_comp = ks_2samp(s[var], comp[var])
-        value = smd(s[var], df_dev[var])
-        rows.append({
-            "variable": var,
-            "stratifiee": var in STRATIFIED,
-            "mean_sample": s[var].mean(),
-            "mean_dev": df_dev[var].mean(),
-            "median_sample": s[var].median(),
-            "median_dev": df_dev[var].median(),
-            "SMD": value,
-            "SMD_ok": abs(value) < SMD_THRESHOLD,
-            "D_vs_dev": ks_2samp(s[var], df_dev[var]).statistic,
-            "D_vs_complement": ks_comp.statistic,
-            "p_vs_complement": ks_comp.pvalue,
-        })
-    return pd.DataFrame(rows)
+# def smd(sample_values, dev_values):
+#     sd = dev_values.std(ddof=1)
+#     return (sample_values.mean() - dev_values.mean()) / sd if sd > 0 else 0.0
  
  
-def main():
-    sample = get_representative_sample(str(RTTM_DIR), str(WAV_DIR), SAMPLE_SIZE, seed=SEED)
-    df_dev = build_dev_table()
-    result = compare_sample_to_dev(df_dev, list(sample.keys()))
+# def compare_sample_to_dev(df_dev, sample_stems):
+#     in_sample = df_dev["file"].isin(sample_stems)
+#     s, comp = df_dev[in_sample], df_dev[~in_sample]
+#     rows = []
+#     for var in STRATIFIED + OTHERS:
+#         ks_comp = ks_2samp(s[var], comp[var])
+#         value = smd(s[var], df_dev[var])
+#         rows.append({
+#             "variable": var,
+#             "stratifiee": var in STRATIFIED,
+#             "mean_sample": s[var].mean(),
+#             "mean_dev": df_dev[var].mean(),
+#             "median_sample": s[var].median(),
+#             "median_dev": df_dev[var].median(),
+#             "SMD": value,
+#             "SMD_ok": abs(value) < SMD_THRESHOLD,
+#             "D_vs_dev": ks_2samp(s[var], df_dev[var]).statistic,
+#             "D_vs_complement": ks_comp.statistic,
+#             "p_vs_complement": ks_comp.pvalue,
+#         })
+#     return pd.DataFrame(rows)
  
-    print(f"Sample : {len(sample)} fichiers / dev : {len(df_dev)} fichiers (seed={SEED})\n")
-    print(result.round(3).to_string(index=False))
  
-    OUT_CSV.parent.mkdir(exist_ok=True)
-    result.to_csv(OUT_CSV, index=False)
-    print(f"\nTableau sauvegardé dans {OUT_CSV}")
+# def main():
+#     sample = get_representative_sample(str(RTTM_DIR), str(WAV_DIR), SAMPLE_SIZE, seed=SEED)
+#     df_dev = build_dev_table()
+#     result = compare_sample_to_dev(df_dev, list(sample.keys()))
+ 
+#     print(f"Sample : {len(sample)} fichiers / dev : {len(df_dev)} fichiers (seed={SEED})\n")
+#     print(result.round(3).to_string(index=False))
+ 
+#     OUT_CSV.parent.mkdir(exist_ok=True)
+#     result.to_csv(OUT_CSV, index=False)
+#     print(f"\nTableau sauvegardé dans {OUT_CSV}")
  
  
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
 
 
@@ -273,3 +296,8 @@ if __name__ == "__main__":
 # print(test)
 # notebook.crop = Segment(t1, t2)
 # save_frise_rttm(test)
+
+#ecriture des samples en dur
+
+#save_sample_rttm(get_representative_sample("data/voxconverse/annotations/dev", "data/voxconverse/dev/audio", 40),"samples/sample40_seed130.rttm")
+#save_sample_rttm(get_representative_sample("data/voxconverse/annotations/dev", "data/voxconverse/dev/audio", 90),"samples/sample90_seed130.rttm")
