@@ -29,8 +29,8 @@ warmup_s = 10.0#durée du passage de chauffe (s), exclu du RTF ; 0 pour désacti
 
 #jeu d'évaluation : décommenter UN des deux blocs
 #A : sample 90 du dev, comparaison directe avec results/baseline_sample90_seed130_par_fichier.csv (fuite probable)
-reference = "samples/sample90_seed130.rttm"#un fichier .rttm OU un dossier de .rttm
-audio_dir = Path("data/voxconverse/dev/audio")
+reference = "samples/test/sample90_seed130.rttm"#un fichier .rttm OU un dossier de .rttm
+audio_dir = Path("data/voxconverse/test/voxconverse_test_wav")
 run_name = "pyannote_c1_sample90_seed130"
 #B : test complet (D-21 : à n'utiliser que quand on ne règle plus rien) ; voxconverse_test_wav/, pas __MACOSX/ (D-12)
 # reference = "data/voxconverse/annotations/test"
