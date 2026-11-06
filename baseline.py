@@ -40,12 +40,12 @@ run_name = "baseline_sample90_seed130"
  
 def diarize_file(path, uri, n_ref_speakers=None):
     """Toute la chaîne sur UN fichier. Les tableaux lourds (audio, STFT, MFCC, matrice d'affinité)
-    sont des variables locales : ils sont libérés dès que la fonction se termine."""
+    sont des variables locales : ils sont libérés dès que la fonction se termine pour eviter de staurer la ram"""
     #1 échantillonnage
     audio = load_audio(str(path), sr)
     #2 trames, fenêtre de Hann, STFT
     D = FFT(audio, frame_size=frame_size, hop_size=hop_size)
-    del audio#plus utilisé, on le libère tout de suite
+    del audio#plus utilisé, on le libère tout de suite pour la ram bb
     #3 VAD
     vad = energy_vad(D, sr=sr, frame_size=frame_size, hop_size=hop_size, seuil_db=seuil_db,
                      min_silence=min_silence, min_speech=min_speech, uri=uri)

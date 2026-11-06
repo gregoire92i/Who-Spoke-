@@ -297,7 +297,10 @@ def save_sample_rttm(sample, output_path, split_files=False):
 # notebook.crop = Segment(t1, t2)
 # save_frise_rttm(test)
 
-#ecriture des samples en dur
+#ecriture des samples en rttm
 
 #save_sample_rttm(get_representative_sample("data/voxconverse/annotations/dev", "data/voxconverse/dev/audio", 40),"samples/sample40_seed130.rttm")
 #save_sample_rttm(get_representative_sample("data/voxconverse/annotations/dev", "data/voxconverse/dev/audio", 90),"samples/sample90_seed130.rttm")
+
+save_sample_rttm(get_representative_sample("data/voxconverse/annotations/test", "data/voxconverse/test/voxconverse_test_wav", 40),"samples/test/sample40_seed130.rttm")
+save_sample_rttm(get_representative_sample("data/voxconverse/annotations/test", "data/voxconverse/test/voxconverse_test_wav", 90),"samples/test/sample90_seed130.rttm")
