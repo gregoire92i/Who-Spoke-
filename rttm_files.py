@@ -42,6 +42,7 @@ def load_audios_from_annotation(annotation_, sr, audio_dir, ext=".wav"):
 
 #graphique
 def save_frise_rttm(annotation_):
+    "prends une annotation en entrée, renvoie un graphe de representation des locuteurs sur un fichier audio "
     fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(12, 6),sharex=True)
     notebook.plot_annotation(annotation_,ax=axes)
     fig.savefig("figures/frise.png", bbox_inches="tight")
@@ -141,7 +142,7 @@ def get_representative_sample(folder_path,wav_folder,sample_size,all=False,seed=
             sample_annotations[row[0]]=folder_annotations[row[0]]#row[0] stem du fichier tiré
     return sample_annotations
 
-##MADE BY CLAUDE
+#MADE BY CLAUDE
 def save_sample_rttm(sample, output_path, split_files=False):
     """
     Save the annotations returned by get_representative_sample in RTTM format.
@@ -298,9 +299,9 @@ def save_sample_rttm(sample, output_path, split_files=False):
 # save_frise_rttm(test)
 
 #ecriture des samples en rttm
-
+#dev
 #save_sample_rttm(get_representative_sample("data/voxconverse/annotations/dev", "data/voxconverse/dev/audio", 40),"samples/sample40_seed130.rttm")
 #save_sample_rttm(get_representative_sample("data/voxconverse/annotations/dev", "data/voxconverse/dev/audio", 90),"samples/sample90_seed130.rttm")
-
-save_sample_rttm(get_representative_sample("data/voxconverse/annotations/test", "data/voxconverse/test/voxconverse_test_wav", 40),"samples/test/sample40_seed130.rttm")
-save_sample_rttm(get_representative_sample("data/voxconverse/annotations/test", "data/voxconverse/test/voxconverse_test_wav", 90),"samples/test/sample90_seed130.rttm")
+#tests
+#save_sample_rttm(get_representative_sample("data/voxconverse/annotations/test", "data/voxconverse/test/voxconverse_test_wav", 40),"samples/test/sample40_seed130.rttm")
+#save_sample_rttm(get_representative_sample("data/voxconverse/annotations/test", "data/voxconverse/test/voxconverse_test_wav", 90),"samples/test/sample90_seed130.rttm")

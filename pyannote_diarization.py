@@ -7,8 +7,8 @@ Accès au modèle (une seule fois) :
   2. créer un token (lecture) sur https://huggingface.co/settings/tokens
   3. dans le terminal : `hf auth login` (le token est stocké dans ~/.cache/huggingface, jamais dans le code, D-02)
 
-Fuite de données (D-40) : segmentation-3.0 a été entraîné sur VoxConverse (split non précisé,
-très probablement le dev). Un DER mesuré sur le dev est donc probablement trop optimiste."""
+attention aux fuites de données (D-40) : segmentation-3.0 a été entraîné sur VoxConverse (split pas vraiment précisé mais,
+très probablement le dev, car ancienne version de pyannote entrainée uniquement sur le dev)."""
 import time
 from pathlib import Path
 

@@ -13,9 +13,12 @@ from pyannote.core import Segment, Timeline
 from pyannote.database.util import load_rttm
 from pyannote.metrics.detection import DetectionErrorRate
 from pyannote.metrics.diarization import DiarizationErrorRate, JaccardErrorRate
- 
-from experimenations import (load_audio, FFT, energy_vad, compute_mfcc,
-                             compute_embeddings, spectral_clustering, windows_to_annotation)
+ #loading pipeline functions
+from audio_features import load_audio, FFT, energy_vad, compute_mfcc
+from embeddings import compute_embeddings
+from clustering import spectral_clustering
+from post_treatment import windows_to_annotation
+
  
 #### PARAMÈTRES ####
 #tous les paramètres sont ici et passés EXPLICITEMENT aux fonctions :
@@ -32,10 +35,16 @@ win_s, hop_s, min_s = 1.0, 0.5, 0.5#fenêtres des embeddings (s)
 stats, drop_c0, mode = "mean_std", False, "segment"
 oracle = False#True : nombre de locuteurs lu dans le RTTM ; False : eigengap
  
-sample_rttm = "samples/sample90_seed130.rttm"
-audio_dir = Path("data/voxconverse/dev/audio")
+sample_rttm = "samples/test/sample90_seed130.rttm"
+audio_dir = Path("data/voxconverse/test/voxconverse_test_wav")
 out_dir = Path("results")
 run_name = "baseline_sample90_seed130"
+
+#dev -> adjust parameters
+#sample_rttm = "samples/test/sample90_seed130.rttm"
+#audio_dir = Path("data/voxconverse//audio")
+#out_dir = Path("results")
+#run_name = "baseline_sample90_seed130"
  
  
 def diarize_file(path, uri, n_ref_speakers=None):

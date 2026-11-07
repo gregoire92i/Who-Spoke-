@@ -1,4 +1,4 @@
-"""VAD par énergie (D-52, D-53, D-54). Module réutilisable : aucun code exécuté à l'import."""
+"""VAD par énergie (D-52, D-53, D-54). Module réutilisable : aucun code exécuté à l'import. -> codé par claude pour les test de vad"""
 import numpy as np
 import librosa
 from pyannote.core import Segment, Timeline
