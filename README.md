@@ -11,11 +11,19 @@ Who-Spoke-/
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
-├── experimenations.py            # exploration audio : forme d'onde, spectrogramme, énergie
-├── plot_reference.py             # timeline de référence d'un fichier RTTM
+├── baseline.py                   # point d'entrée : baseline complète sur un sample + évaluation
+├── audio_features.py             # chargement audio, STFT, VAD par énergie, MFCC
+├── embeddings.py                 # embeddings par fenêtre glissante (statistiques des MFCC)
+├── clustering.py                 # clustering spectral, nombre de locuteurs par eigengap
+├── post_treatment.py             # fenêtres -> trames -> Annotation pyannote
+├── vad.py                        # évaluation de la VAD seule
+├── pyannote_diarization.py       # diarisation avec la pipeline pré-entraînée pyannote
 ├── rttm_files.py                 # statistiques par fichier, tirage du sous-ensemble de dev
+├── plot_reference.py             # timeline de référence d'un fichier RTTM
 ├── Data_vizualizer.py            # statistiques du corpus, comparaison sous-ensemble / dev complet
 ├── metrics_and_sanity_checks.py  # sanity checks de la chaîne d'évaluation
+├── samples/                      # listes des fichiers tirés du dev (RTTM)
+├── results/                      # sorties de baseline.py (RTTM des hypothèses, CSV)
 ├── figures/                      # figures générées par les scripts
 ├── data/                         # non versionné
 └── docs/
@@ -93,6 +101,27 @@ data/voxconverse/
     ├── dev/                       # RTTM v0.3
     └── test/
 ```
+
+## Lancer la baseline
+
+Tous les scripts utilisent des chemins relatifs : ils doivent être lancés **depuis la racine du dépôt**, avec le `.venv` activé.
+
+1. Sample de dev : `baseline.py` lit la liste des fichiers à traiter dans `samples/sample90_seed130.rttm` (90 fichiers du dev, tirage stratifié, seed 130). Il es possible de regenerer un sample avec le code en commentaire à la fin de rttm_files. Le sample sera le meme si la seed n'est pas touchée.
+
+2. Lancer la baseline (VAD énergie → MFCC → embeddings → clustering spectral → post-traitement → évaluation) :
+
+```bash
+python baseline.py
+```
+
+Les paramètres (VAD, MFCC, fenêtres, clustering, sample utilisé) sont regroupés en haut de `baseline.py`. Les fichiers sont traités un par un pour limiter la RAM.
+
+Sorties dans `results/` :
+
+- `baseline_sample90_seed130.rttm` : hypothèses de diarisation de tous les fichiers ;
+- `baseline_sample90_seed130_par_fichier.csv` : scores par fichier (DER, DER forgiving, JER, erreur de VAD, RTF, nombre de locuteurs estimé et de référence).
+
+Les scores agrégés (micro) sont affichés dans le terminal.
 
 ## Protocole d'évaluation
 

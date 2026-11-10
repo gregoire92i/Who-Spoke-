@@ -10,7 +10,8 @@ sr=16000#frequence d'echantillonage
 frame_size=64#en ms
 hop_size=10#en ms
 #conversion en nombre/s
-
+#embeddings parameters
+windows_size=1.0
 
 def timeline_to_mask(tl, n_frames, sr=sr, hop_size=hop_size):
     """prends en entrée la timeline tl sortie de vad, masque booléen (n_frames,), renvoie True si la trame est dans un segment de parole."""
@@ -42,7 +43,7 @@ def window_stats(frames, stats="mean_std"):
     #concatenate colle les deux vecteurs bout à bout : [mu_0..mu_12, sigma_0..sigma_12]
     return np.concatenate([mu, frames.std(axis=1)])
 
-def compute_embeddings(mfcc, vad, win_s=1.0, hop_s=0.5, min_s=0.5, stats="mean_std",
+def compute_embeddings(mfcc, vad, win_s=windows_size, hop_s=0.5, min_s=0.5, stats="mean_std",
                        drop_c0=False, mode="segment", sr=sr, hop_size=hop_size):
     """Un embedding par fenêtre glissante, sur les trames de parole uniquement (D-55).
     mfcc : (n_mfcc, n_frames) de compute_mfcc ; vad : Timeline de energy_vad.

@@ -59,3 +59,15 @@ A cofnirmer plus tard :
 ### Sanity checks
 - ref vs ref
 - one speaker partout -> DER de reference
+
+## Problemes de RAM
+tentative de faire tourner la baseline sur tous les fichiers en meme temps -> provoque un bug wsl car manque de RAM
+-> solution : faire passer les fichiers 1 par 1.
+
+## der horrible sur la baseline (50%)
+-> voir rapport intermediaire -> problème vient surement des embeddings car le clustering spectral est instable et se base surtout sur les embeddings
+-> test -> doubler les windods d'embedding -> der modern passe de 43% sur le dev à 33%  et 31% pour le der forgiving???? incroyable
+-> le cle du clustering est l'embedding, on va partir sur un reglage methodique des frames et du hop qui vont ensuite partir pour les windows d'embedding pour avoir des bases fiables.
+
+###
+-> (voir graphiques) -> une tendance se dessine sur les hops, il semblerait qu'un hop plus grand ( qui recouvre moins chaque frame) ait un impact positif sur le DER final bien que faible (sweep frame DER.png)
