@@ -42,9 +42,9 @@ stats, drop_c0, mode = "mean_std", False, "segment" #->à verifier
 collar = 0.0#D-30 : même collar pour les sanity checks et la baseline
 
 #ORACLE : composants remplacés par la vérité terrain (un seul à True à la fois)
-oracle_vad = False#True : VAD = parole de la référence (chevauchements fusionnés)
+oracle_vad = True#True : VAD = parole de la référence (chevauchements fusionnés)
 oracle_k = False#True : nombre de locuteurs lu dans le RTTM ; False : eigengap (remplace `oracle` de baseline.py)
-oracle_vote = True#True : vote oracle dans windows_to_annotation (nécessite ref et mapping)
+oracle_vote = False#True : vote oracle dans windows_to_annotation (nécessite ref et mapping)
 
 #test
 # sample_rttm = "samples/test/sample90_seed130.rttm"

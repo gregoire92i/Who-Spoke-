@@ -100,3 +100,12 @@ Sur les 6,52 % de parole départagée, le départage par score se trompait donc 
 Le DER moderne passe de 33,49 % à 31,63 %, soit −1,86 point.
 Le false alarm et le missed sont identiques au run baseline (4,17 % et 7,77 %). Le gain vient entièrement de la confusion, comme attendu.
 Le gain (1,86 point) correspond bien à la parole modifiée (1,90 %), ce qui confirme que les modifications vont dans le bon sens.
+
+### BILAN des diagnostics oracles 
+
+Bilan des diagnostics oracle (sample 90 du dev, collar 0)
+Composant remplacé par l’oracle	DER moderne	Écart vs baseline	False alarm	Missed	Confusion
+Aucun (baseline)	33,49 %	–	4,17 %	7,77 %	≈ 21,55 %
+VAD	28,67 %	−4,82	0,03 %	6,87 %	21,77 %
+Vote	31,63 %	−1,86	4,17 %	7,77 %	19,70 %
+Nombre de locuteurs k	38,75 %	+5,26	4,17 %	7,77 %	26,82 %
