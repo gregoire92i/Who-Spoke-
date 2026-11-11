@@ -21,6 +21,7 @@ def sanity_check1_ref(annotations_,audio_folder_path, check_collar=0.00, display
     annot_ref1=annotations_
     for stem in annot_ref:
         metric(annot_ref[stem],annot_ref1[stem],uem=Timeline([Segment(0,sf.info(folder_wav/f"{stem}.wav").duration)]))#etre sur que l'uem fasse bien toute la durée du wav
+        metric1(annot_ref[stem],annot_ref1[stem],uem=Timeline([Segment(0,sf.info(folder_wav/f"{stem}.wav").duration)]))
     output=metric.report(display=display)
     output_forgiving=metric1.report(display=display)
     metric.reset()#vider le tableau de metriques
@@ -36,6 +37,7 @@ def sanity_check2_1speaker(annotations_,audio_folder_path, check_collar=0.00,dis
         records=[(Segment(0,sf.info(folder_wav/f"{stem}.wav").duration),0,"spk00")]
         annot_hyp=Annotation.from_records(records, uri=stem, modality=None)
         metric(annotations_[stem],annot_hyp,uem=Timeline([Segment(0,sf.info(folder_wav/f"{stem}.wav").duration)]))
+        metric1(annotations_[stem],annot_hyp,uem=Timeline([Segment(0,sf.info(folder_wav/f"{stem}.wav").duration)]))
     output=metric.report(display=display)
     output_forgiving=metric1.report(display=display)
     metric.reset()#vider le tableau de metriques

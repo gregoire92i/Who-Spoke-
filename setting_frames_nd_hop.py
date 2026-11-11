@@ -4,11 +4,11 @@ Ce qui CHANGE   : frame_ms (taille de trame STFT, donc VAD + MFCC) et hop_pct (p
 Ce qui RESTE    : tout le reste, importé tel quel depuis baseline.py (seuil VAD, smoothing, n_mfcc,
                   fenêtres d'embedding, clustering, oracle, collar, sample, UEM, agrégation micro).
 
-Sorties (dans results/sweep_frames_pct/) :
+Sorties (dans results/sweep_frames_fin/) :
   - resume.csv      : 1 ligne par configuration (métriques micro sur le sample)
   - par_fichier.csv : 1 ligne par (configuration, fichier)
   - rttm/frame{F}_hop{P}pct.rttm : hypothèses, pour réévaluer sans relancer
-  - figures/sweep_frames_DER.png
+  - figures/sweep_frames_fin_DER.png
 
 Reprise : une configuration déjà présente dans resume.csv n'est pas recalculée (on peut couper et relancer).
 Usage :
@@ -35,15 +35,18 @@ import baseline as B#paramètres + diarize_file : une seule source de vérité
 
 
 #### GRILLE ####
-#5 frames réparties de manière égale entre 15 et 70 ms (pas de 13,75 ms)
-FRAMES_MS = [15 + i * (70 - 15) / 4 for i in range(5)]#15, 28.75, 42.5, 56.25, 70
+#25 frames réparties de manière égale entre 35 et 75 ms (pas théorique 1,667 ms = 26,67 échantillons),
+#chacune arrondie à l'échantillon le plus proche pour que frame_size soit un entier exact
+N_FRAMES, FRAME_MIN, FRAME_MAX = 25, 35, 75
+FRAMES_MS = [round((FRAME_MIN + i * (FRAME_MAX - FRAME_MIN) / (N_FRAMES - 1)) * B.sr / 1000) * 1000 / B.sr
+             for i in range(N_FRAMES)]#35, 36.6875, 38.3125, ..., 75
 #hop en % de la frame (la baseline actuelle 60/10 ms correspond à ~17 %)
 HOPS_PCT = [10, 25, 50]
 
 #à 16 kHz, 1 ms = 16 échantillons : on vérifie que chaque frame tombe sur un nombre entier d'échantillons
 assert all(float(f * B.sr / 1000).is_integer() for f in FRAMES_MS)
 
-out_dir = B.out_dir / "sweep_frames_pct"
+out_dir = B.out_dir / "sweep_frames_fin"
 fig_dir = Path("figures")
 resume_csv = out_dir / "resume.csv"
 par_fichier_csv = out_dir / "par_fichier.csv"
@@ -135,14 +138,14 @@ def plot(resume_path=resume_csv):
     ax.set_ylabel("DER moderne (%)  — collar 0, overlap compté")
     ax.set_title(f"DER moderne en fonction de la frame et du hop (% de la frame) — {Path(B.sample_rttm).name}, "
                  f"{int(res['n_files'].iloc[0])} fichiers, agrégation micro", fontsize=11)
-    ax.set_xticks(FRAMES_MS, [f"{f:g}" for f in FRAMES_MS])
+    ax.set_xticks(range(FRAME_MIN, FRAME_MAX + 1, 5))#graduations tous les 5 ms (25 frames : illisible sinon)
     ax.grid(axis="y", color="#e5e4df", linewidth=0.8)
     ax.spines[["top", "right"]].set_visible(False)
     ax.legend(frameon=False, loc="upper left", bbox_to_anchor=(1.06, 1))
     fig.tight_layout()
 
     fig_dir.mkdir(parents=True, exist_ok=True)
-    out = fig_dir / "sweep_frames_DER.png"
+    out = fig_dir / "sweep_frames_fin_DER.png"
     fig.savefig(out, bbox_inches="tight")
     print(f"Figure : {out}")
 

@@ -29,18 +29,24 @@ def window_scores(X, labels, standardize=True):
  
  
 def windows_to_annotation(labels, X, win_segs, vad, n_frames, uri=None, standardize=True,
-                          sr=sr, hop_size=hop_size, return_info=False):
+                          sr=sr, hop_size=hop_size, return_info=False, ref=None, mapping=None):
     """Post-traitement option B : labels de fenêtres -> Annotation pyannote (sans lissage).
  
     labels : (n_fenetres,) sortie de spectral_clustering
     X : (n_fenetres, dim) sortie de compute_embeddings (sert au départage)
     win_segs : liste de Segment, sortie de compute_embeddings
     vad : Timeline de energy_vad ; n_frames : mfcc.shape[1]
+    ref, mapping : ORACLE vote (diagnostic), None par défaut = comportement normal.
+      ref : Annotation de référence ; mapping : dict {label hyp "spkXX": label ref},
+      sortie de DiarizationErrorRate().optimal_mapping(ref, hyp) calculée sur la 1re passe.
  
     Pour chaque trame de 10 ms :
       1. vote : chaque fenêtre qui couvre la trame vote pour son label ;
       2. départage : si plusieurs labels ont le même nombre de votes, on garde celui
          de la fenêtre la plus proche du centroïde de son cluster (window_scores) ;
+      2bis. ORACLE vote (si ref et mapping) : si le label choisi ne correspond pas au vrai locuteur
+         mais qu'une fenêtre qui couvre la trame porte le bon label, on prend ce label
+         (meilleur score si plusieurs) ; sinon la décision normale est gardée ;
       3. masquage : une trame hors VAD ne reçoit aucun label ;
          une trame de parole couverte par aucune fenêtre non plus (elle comptera en missed).
     Les trames consécutives de même label forment un segment.
@@ -49,7 +55,8 @@ def windows_to_annotation(labels, X, win_segs, vad, n_frames, uri=None, standard
       frame_labels (n_frames,) : label par trame, -1 = aucun
       n_speech : trames de parole (VAD)
       n_uncovered : trames de parole couvertes par aucune fenêtre
-      n_tie : trames de parole où le départage par score a été utilisé"""
+      n_tie : trames de parole où le départage par score a été utilisé
+      n_oracle_changed : trames de parole dont le label a été changé par le vote oracle (0 sinon)"""
     labels = np.asarray(labels)
     if len(labels) != len(win_segs) or len(labels) != X.shape[0]:
         raise ValueError(f"tailles incohérentes : {len(labels)} labels, {len(win_segs)} fenêtres, {X.shape[0]} embeddings")
@@ -80,11 +87,31 @@ def windows_to_annotation(labels, X, win_segs, vad, n_frames, uri=None, standard
         frame_labels[max_votes == 0] = -1               # trame couverte par aucune fenêtre
         tie = (candidates.sum(axis=1) > 1) & (max_votes > 0)
  
+    # ORACLE vote : corrige le choix du label là où une fenêtre qui couvre la trame porte le bon locuteur
+    oracle_changed = np.zeros(n_frames, dtype=bool)
+    if ref is not None and mapping is not None and k > 0:
+        # ref_mask[t, l] = True si le locuteur de la référence associé au cluster l parle à la trame t
+        # (clusters absents du mapping = clusters en trop : colonne False, jamais "bons")
+        ref_mask = np.zeros((n_frames, k), dtype=bool)
+        for hyp_label, ref_label in mapping.items():
+            l = int(str(hyp_label)[3:])                 # "spk03" -> 3 (format écrit plus bas)
+            if l < k:
+                ref_mask[:, l] = timeline_to_mask(ref.label_timeline(ref_label), n_frames,
+                                                  sr=sr, hop_size=hop_size)
+        # ok[t, l] : label l porté par au moins une fenêtre qui couvre t ET associé au vrai locuteur de t
+        ok = (votes > 0) & ref_mask
+        # label actuel déjà bon ? (en chevauchement, deux labels peuvent être bons : on ne touche pas)
+        current_ok = (frame_labels >= 0) & ok[np.arange(n_frames), np.clip(frame_labels, 0, None)]
+        fix = ok.any(axis=1) & ~current_ok              # trames corrigeables par le vote oracle
+        frame_labels[fix] = np.argmax(np.where(ok, best, -np.inf), axis=1)[fix]
+        oracle_changed = fix
+ 
     # masquage par la VAD (en mode concat, une fenêtre peut enjamber un silence)
     mask = timeline_to_mask(vad, n_frames, sr=sr, hop_size=hop_size)
     frame_labels[~mask] = -1
     if k > 0:
         n_tie = int((tie & mask).sum())
+    n_oracle_changed = int((oracle_changed & mask).sum())   # parole uniquement, comme n_tie
  
     # trames consécutives de même label -> segments
     # change[i] = True si le label change entre la trame i-1 et la trame i
@@ -99,6 +126,7 @@ def windows_to_annotation(labels, X, win_segs, vad, n_frames, uri=None, standard
         info = {"frame_labels": frame_labels,
                 "n_speech": int(mask.sum()),
                 "n_uncovered": int((mask & (frame_labels == -1)).sum()),
-                "n_tie": n_tie}
+                "n_tie": n_tie,
+                "n_oracle_changed": n_oracle_changed}
         return annotation, info
     return annotation

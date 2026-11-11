@@ -64,10 +64,39 @@ A cofnirmer plus tard :
 tentative de faire tourner la baseline sur tous les fichiers en meme temps -> provoque un bug wsl car manque de RAM
 -> solution : faire passer les fichiers 1 par 1.
 
-## der horrible sur la baseline (50%)
+## DER horrible sur la baseline (50%)
 -> voir rapport intermediaire -> problème vient surement des embeddings car le clustering spectral est instable et se base surtout sur les embeddings
 -> test -> doubler les windods d'embedding -> der modern passe de 43% sur le dev à 33%  et 31% pour le der forgiving???? incroyable
 -> le cle du clustering est l'embedding, on va partir sur un reglage methodique des frames et du hop qui vont ensuite partir pour les windows d'embedding pour avoir des bases fiables.
 
-###
--> (voir graphiques) -> une tendance se dessine sur les hops, il semblerait qu'un hop plus grand ( qui recouvre moins chaque frame) ait un impact positif sur le DER final bien que faible (sweep frame DER.png)
+### Frames et hop, leur impact sur le DER ?
+-> (voir graphiques) -> une tendance se dessine : 
+1 le hop ne semble pas avoir d'impact sur le DER 
+2 : le der diminue très legerement quand la taille des frames augmente
+
+## MODE ORACLE : VAD, eigeingap, et post treatment
+### VAD
+-> VAD en mode oracle (vad parfaite)-> nous fait gagner ~4% sur le DER
+***PROBLEMES*** : 
+- Parole VAD sans label : 3.33% -> frames que la VAD a classées en parole, mais qu’aucune window ne couvre -> moment ou qqun parle mais aucun locuteur n'y est attribué -> pourquoi ?
+- Parole départagée     : 4.17% -> Ce sont les frames où les windows qui les couvrent sont en désaccord à égalité. C’est le score au centroïde qui tranche (n_tie).
+
+***CONCLUSION*** : La VAD n'est pas un gros facteur limitant, à voir comme amélioration secondaire, mais en departageant simplement les 3.33% (ou 2.24% pour la vad pas en mode oracle), on peut gagner simplement
+
+### Eigeingap
+-> Eigeingap en mode oracle : nombre de locuteurs connus
+***PROBLEME*** : en mode oracle Eigeingap ou on connait le nombre de locuteurs, le DER est PLUS ELEVEE DE 5% que sans (33 à 38%) -> confusion passe de 21.5% à 26.8% -> clustering et embedding coupables ?
+***TESTS POSSIBLES***
+-> garder le clustering et remplacer les embeddings par des embeddings pré-entraînés
+-> ou inversement remplacer le clustering par AHC
+
+-> fichier problematique : [73/90] tucrg | DER 474.2% | k 3 (réf 3) | RTF 0.002
+-> pour la baseline normal on a 2.24% de parole sans label et 6.52% de parole départagée. Ici, on a 2,24 % et 17,38 %. -> etrange mais pas anormal car lele eigeingap a tendance à sous estimer le nbre de locuteurs -> donc moins de frontieres entre locuteurs sans le mode oracle
+
+### Post treatment
+Sur les 6,52 % de parole départagée, le départage par score se trompait donc sur 1,90 %, soit environ 30 % des cas. Pour le reste, soit il avait déjà choisi le bon label, soit aucune des deux windows ne portait le bon locuteur.
+
+***Résultat du diagnostic***
+Le DER moderne passe de 33,49 % à 31,63 %, soit −1,86 point.
+Le false alarm et le missed sont identiques au run baseline (4,17 % et 7,77 %). Le gain vient entièrement de la confusion, comme attendu.
+Le gain (1,86 point) correspond bien à la parole modifiée (1,90 %), ce qui confirme que les modifications vont dans le bon sens.

@@ -23,13 +23,14 @@ from metrics_and_sanity_checks import sanity_check1_ref, sanity_check2_1speaker
 #tous les paramètres sont ici et passés EXPLICITEMENT aux fonctions :
 #les valeurs par défaut de experimenations.py ne sont jamais utilisées en silence
 sr = 16000#fréquence d'échantillonnage (D-50)
-frame_ms, hop_ms = 60, 10#D-51
-frame_size = int(frame_ms * sr / 1000)#64 ms -> 1024 échantillons
-hop_size = int(hop_ms * sr / 1000)#10 ms -> 160 échantillons
+frame_ms, hop_ms = 65, 32.5 #D-?
+frame_size = int(frame_ms * sr / 1000)
+hop_size = int(hop_ms * sr / 1000)
 
 seuil_db = -30.0#VAD, grid search du 05/11
 min_silence, min_speech = 0.5, 0.3#smoothing de la VAD (s)
 n_mfcc = 13
+#embedding
 win_s, hop_s, min_s = 2.0, 1.0, 0.5#fenêtres des embeddings (s)
 stats, drop_c0, mode = "mean_std", False, "segment"
 oracle = False#True : nombre de locuteurs lu dans le RTTM ; False : eigengap
@@ -47,7 +48,7 @@ out_dir = Path("results")
 run_name = "baseline_sample90_seed130"
 
 
-def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size):# * force la defintion des parametres à gauche de * dans l'appek de la fonction
+def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size):# * force la defintion des parametres à gauche de * dans l'appel de la fonction
     """Toute la chaîne sur UN fichier. Les tableaux lourds (audio, STFT, MFCC, matrice d'affinité)
     sont des variables locales : ils sont libérés dès que la fonction se termine pour eviter de staurer la ram"""
     #1 échantillonnage
