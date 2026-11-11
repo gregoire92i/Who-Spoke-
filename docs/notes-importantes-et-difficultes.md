@@ -69,10 +69,20 @@ tentative de faire tourner la baseline sur tous les fichiers en meme temps -> pr
 -> test -> doubler les windods d'embedding -> der modern passe de 43% sur le dev à 33%  et 31% pour le der forgiving???? incroyable
 -> le cle du clustering est l'embedding, on va partir sur un reglage methodique des frames et du hop qui vont ensuite partir pour les windows d'embedding pour avoir des bases fiables.
 
+## Reglages des parametres
+
 ### Frames et hop, leur impact sur le DER ?
 -> (voir graphiques) -> une tendance se dessine : 
-1 le hop ne semble pas avoir d'impact sur le DER 
-2 : le der diminue très legerement quand la taille des frames augmente
+1 le hop ne semble pas avoir d'impact sur le DER, en tout cas le bruit est trop important pour pouvoir porter un jugement dessus
+2 : le der diminue très legerement quand la taille des frames augmente (optimal vers 70ms environ)
+
+### VAD
+optimal vers -30db en seuil d'entrée reglée par grid search
+
+### embedding windows
+parametre avec le plus gros impact sur le DER (voir graphique), impact directement la confusion du clustering.
+optimal vers 2.0 s
+
 
 ## MODE ORACLE : VAD, eigeingap, et post treatment
 ### VAD
@@ -83,6 +93,12 @@ tentative de faire tourner la baseline sur tous les fichiers en meme temps -> pr
 
 ***CONCLUSION*** : La VAD n'est pas un gros facteur limitant, à voir comme amélioration secondaire, mais en departageant simplement les 3.33% (ou 2.24% pour la vad pas en mode oracle), on peut gagner simplement
 
+Le false alarm disparaît (−4,14 points), comme attendu.
+Le missed ne baisse presque pas (−0,90 point). Avec une VAD parfaite, il reste 6,87 % de parole manquée, qui vient de deux sources :
+la parole sans window, qui passe de 2,24 % à 3,33 %. La VAD de la référence contient plus de segments courts que la VAD par énergie, et un segment de moins de min_s = 0,5 s ne reçoit aucune window ;
+le chevauchement de voix : la baseline ne donne qu’un seul label par frame, donc le second locuteur est toujours manqué.
+La confusion ne change pas (+0,2 point). Une meilleure VAD ne règle pas le problème principal.
+
 ### Eigeingap
 -> Eigeingap en mode oracle : nombre de locuteurs connus
 ***PROBLEME*** : en mode oracle Eigeingap ou on connait le nombre de locuteurs, le DER est PLUS ELEVEE DE 5% que sans (33 à 38%) -> confusion passe de 21.5% à 26.8% -> clustering et embedding coupables ?
@@ -90,7 +106,6 @@ tentative de faire tourner la baseline sur tous les fichiers en meme temps -> pr
 -> garder le clustering et remplacer les embeddings par des embeddings pré-entraînés
 -> ou inversement remplacer le clustering par AHC
 
--> fichier problematique : [73/90] tucrg | DER 474.2% | k 3 (réf 3) | RTF 0.002
 -> pour la baseline normal on a 2.24% de parole sans label et 6.52% de parole départagée. Ici, on a 2,24 % et 17,38 %. -> etrange mais pas anormal car lele eigeingap a tendance à sous estimer le nbre de locuteurs -> donc moins de frontieres entre locuteurs sans le mode oracle
 
 ### Post treatment
@@ -109,3 +124,13 @@ Aucun (baseline)	33,49 %	–	4,17 %	7,77 %	≈ 21,55 %
 VAD	28,67 %	−4,82	0,03 %	6,87 %	21,77 %
 Vote	31,63 %	−1,86	4,17 %	7,77 %	19,70 %
 Nombre de locuteurs k	38,75 %	+5,26	4,17 %	7,77 %	26,82 %
+
+## FICHIERS PROBLEMATIQUES 
+certains fichier ont un DER plusieurs fois superieurs aux autre avec un facteur 10, meme avec le clustering en mode oracle :
+-> ex de fichier problematique (mode oracle) : [73/90] tucrg | DER 474.2% | k 3 (réf 3) | RTF 0.002
+
+tous environs les mmes points en communs : 
+-> musique fortes ou bruit fort (bcp d'energie dans les frames, de bruit)
+-> nbre de speakers important
+
+la vad par energie est completement inefficace sur ces fichiers et le clustering a du mal, mme en connaissant le nombre de speaker.
