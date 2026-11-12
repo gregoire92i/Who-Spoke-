@@ -28,7 +28,7 @@ frame_size = int(frame_ms * sr / 1000)
 hop_size = int(hop_ms * sr / 1000)
 
 seuil_db = -30.0#VAD, grid search du 05/11
-min_silence, min_speech = 0.5, 0.3#smoothing de la VAD (s)
+min_silence, min_speech = 0.5, 0.25#smoothing de la VAD (s)
 n_mfcc = 13
 #embedding
 win_s, hop_s, min_s = 2.0, 1.0, 0.5#fenêtres des embeddings (s)

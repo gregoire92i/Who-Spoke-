@@ -36,7 +36,7 @@ Quelques outliers, on verra ce qu'on en fait après avoir fini d'établir la bas
 
 ## Décisions d'évaluation
 Pour l'instant :
-on fixe le collar=0ms convention NIST -> eviter de penaliser les imprecisions de notation -> porbleme : maj du collar à 0 pour pouvoir comparzer aux modeles pyannote
+on  voudrait fixer le collar à 0.1 ou 0.25 -> eviter de penaliser les imprecisions de notation -> porbleme : finalement collar à 0 pour pouvoir comparzer aux modeles pyannote
 - DER qui compte les overlap (approche moderne) -> metrique principale
 - DER sans les overlap (approche ancienne "forgiving")
 - JER
@@ -44,7 +44,7 @@ on fixe le collar=0ms convention NIST -> eviter de penaliser les imprecisions de
 UEM = [0, durée réelle de l'audio]
 agrégation de plusieurs fichiers -> micro, car plus représentatif.
 
-### Metriques pour la detection de parole seule
+### Metriques pour la detection de parole seule (VAD)
 
 - detection error=(FA+MISS)/speaking duration
 
@@ -125,9 +125,17 @@ VAD	28,67 %	−4,82	0,03 %	6,87 %	21,77 %
 Vote	31,63 %	−1,86	4,17 %	7,77 %	19,70 %
 Nombre de locuteurs k	38,75 %	+5,26	4,17 %	7,77 %	26,82 %
 
+1 La confusion (embeddings + clustering) est le composant qui limite la baseline : environ 21 à 22 points sur 33, présents dans tous les runs oracle.
+2 La VAD coûte au maximum environ 5 points, surtout en false alarm.
+3 Le vote coûte au maximum environ 2 points.
+4 L’estimation de k n’est pas en cause : le vrai k dégrade le DER. ( sera en cause plus tard si le clustering est amelioré )
+
+Idée : proposer une amelioration sur la VAD puis une amelioration sur le clustering 
+
+
 ## FICHIERS PROBLEMATIQUES 
 certains fichier ont un DER plusieurs fois superieurs aux autre avec un facteur 10, meme avec le clustering en mode oracle :
--> ex de fichier problematique (mode oracle) : [73/90] tucrg | DER 474.2% | k 3 (réf 3) | RTF 0.002
+-> ex de fichier problematique (mode oracle) : [73/90] tucrg | DER 474.2% | k 3 (réf 3) | RTF 0.002 (semble etre un concert)
 
 tous environs les mmes points en communs : 
 -> musique fortes ou bruit fort (bcp d'energie dans les frames, de bruit)

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from pyannote.database.util import load_rttm
 from rttm_files import load_file_annotations
 from pyannote.core import Segment, Timeline, Annotation
+from scipy.ndimage import uniform_filter1d
 
 #default parameters (cuz unless modoified in main)
 sr=16000#frequence d'echantillonage
@@ -12,6 +13,10 @@ hop_size=10#en ms
 #conversion en nombre/s
 frame_size=int(frame_size*(sr/1000))
 hop_size=int(hop_size*(sr/1000))
+
+#VAD
+delta_db=3.18 #hysteresis
+smooth_frames=3 #lissage par moyenne glissante sur k frames
 
 #charger les audios
 def load_audio (path,sr):
@@ -33,29 +38,79 @@ def RMS_on_FFT(FFT_output,frame_size=frame_size):
 
 
 #axe d'amelioration -> smoothing sur k trames
+# def energy_vad(D, sr=sr, frame_size=frame_size, hop_size=hop_size,
+#                seuil_db=-30.0, min_silence=0.5, min_speech=0.3, uri=None):
+#     """VAD par énergie avec smoothing par durées minimales (D-53, D-54).
+#     D : sortie de FFT() (STFT complexe). Renvoie une Timeline des zones de parole."""
+#     # 1. énergie par trame, en dB relatifs au max du fichier
+#     rms = RMS_on_FFT(D, frame_size=frame_size)
+#     rms_db = librosa.amplitude_to_db(rms, ref=np.max)[0]   # (1, n) -> (n,)
+
+#     # 2 décision trame par trame (0/1)
+#     is_speech = (rms_db > seuil_db).astype(int)#rms db>seuil_db produit un tableau de booleen, astype transforme en 1 et 0. -> Booleen pas deja 1 et 0 ?
+
+#     # 3 changements d'état : +1 = début de parole, -1 = fin
+#     #    prepend/append=0 gèrent un fichier qui commence ou finit en parole
+#     d = np.diff(is_speech, prepend=0, append=0)#np diff -> la différence entre éléments consécutifs, prepend et append un padding de 0 pour calculer le 1er element du tableau
+#     starts = np.flatnonzero(d == 1)#flatnonzero renvoie SEULEMENT les indices où la valeur est vraie (1), starts un tableau contenant uniquement ces indices -> creer des segments ensuite
+#     ends = np.flatnonzero(d == -1)# mme chose mais (-1)
+
+#     # 4 indices de trame -> secondes (sr explicite : car sr de base librosa = 22050 -> le temps en s serait faux)
+#     t_starts = librosa.frames_to_time(starts, sr=sr, hop_length=hop_size)#tstarts tableau de sdebuts de parole en s
+#     t_ends = librosa.frames_to_time(ends, sr=sr, hop_length=hop_size)
+#     tl = Timeline([Segment(s, e) for s, e in zip(t_starts, t_ends)], uri=uri)# zip associe 1er debut de t starts avec 1er debut de t end, marche juste avec les indices egalement
+
+#     # 5. smoothing : d'abord combler les trous courts, PUIS supprimer la parole courte
+#     tl = tl.support(collar=min_silence)
+#     tl = Timeline([seg for seg in tl if seg.duration >= min_speech], uri=uri)
+#     return tl
+
+# necessaire pr vad
+def hysteresis(x, seuil_haut, seuil_bas):
+    """Décision 0/1 par trame : on entre en parole si x > seuil_haut, on en sort si x <= seuil_bas.
+    Avec seuil_haut == seuil_bas : identique à (x > seuil).astype(int)."""
+    is_speech = np.zeros(len(x), dtype=int)
+    etat = 0
+    for i, v in enumerate(x):
+        if etat == 0 and v > seuil_haut:
+            etat = 1
+        elif etat == 1 and v <= seuil_bas:
+            etat = 0
+        is_speech[i] = etat
+    return is_speech
+
+
 def energy_vad(D, sr=sr, frame_size=frame_size, hop_size=hop_size,
-               seuil_db=-29.0, min_silence=0.5, min_speech=0.3, uri=None):
-    """VAD par énergie avec smoothing par durées minimales (D-53, D-54).
-    D : sortie de FFT() (STFT complexe). Renvoie une Timeline des zones de parole."""
+               seuil_db=-30.0, delta_db=delta_db, smooth_frames=smooth_frames,
+               min_silence=0.5, min_speech=0.3, uri=None):
+    """VAD par énergie : smoothing de l'énergie, hystérésis, puis durées minimales (D-53, D-54).
+    D : sortie de FFT() (STFT complexe). Renvoie une Timeline des zones de parole.
+    Hystérésis centrée sur seuil_db : entrée si > seuil_db + delta_db/2, sortie si <= seuil_db - delta_db/2.
+    delta_db=0 et smooth_frames=1 -> ancienne VAD à seuil simple."""
     # 1. énergie par trame, en dB relatifs au max du fichier
     rms = RMS_on_FFT(D, frame_size=frame_size)
     rms_db = librosa.amplitude_to_db(rms, ref=np.max)[0]   # (1, n) -> (n,)
 
-    # 2 décision trame par trame (0/1)
-    is_speech = (rms_db > seuil_db).astype(int)#rms db>seuil_db produit un tableau de booleen, astype transforme en 1 et 0. -> Booleen pas deja 1 et 0 ?
+    # 1b. smoothing : moyenne glissante centrée sur smooth_frames trames
+    #     mode="nearest" : on répète la valeur de bord (un padding à 0 dB = le max fausserait les bords)
+    if smooth_frames > 1:
+        rms_db = uniform_filter1d(rms_db, size=smooth_frames, mode="nearest")
 
-    # 3 changements d'état : +1 = début de parole, -1 = fin
+    # 2. décision trame par trame (0/1) avec hystérésis
+    is_speech = hysteresis(rms_db, seuil_haut=seuil_db + delta_db / 2, seuil_bas=seuil_db - delta_db / 2)
+
+    # 3. changements d'état : +1 = début de parole, -1 = fin
     #    prepend/append=0 gèrent un fichier qui commence ou finit en parole
-    d = np.diff(is_speech, prepend=0, append=0)#np diff -> la différence entre éléments consécutifs, prepend et append un padding de 0 pour calculer le 1er element du tableau
-    starts = np.flatnonzero(d == 1)#flatnonzero renvoie SEULEMENT les indices où la valeur est vraie (1), starts un tableau contenant uniquement ces indices -> creer des segments ensuite
-    ends = np.flatnonzero(d == -1)# mme chose mais (-1)
+    d = np.diff(is_speech, prepend=0, append=0)
+    starts = np.flatnonzero(d == 1)
+    ends = np.flatnonzero(d == -1)
 
-    # 4 indices de trame -> secondes (sr explicite : car sr de base librosa = 22050 -> le temps en s serait faux)
-    t_starts = librosa.frames_to_time(starts, sr=sr, hop_length=hop_size)#tstarts tableau de sdebuts de parole en s
+    # 4. indices de trame -> secondes (sr explicite : sr de base librosa = 22050)
+    t_starts = librosa.frames_to_time(starts, sr=sr, hop_length=hop_size)
     t_ends = librosa.frames_to_time(ends, sr=sr, hop_length=hop_size)
-    tl = Timeline([Segment(s, e) for s, e in zip(t_starts, t_ends)], uri=uri)# zip associe 1er debut de t starts avec 1er debut de t end, marche juste avec les indices egalement
+    tl = Timeline([Segment(s, e) for s, e in zip(t_starts, t_ends)], uri=uri)
 
-    # 5. smoothing : d'abord combler les trous courts, PUIS supprimer la parole courte
+    # 5. smoothing par durées : d'abord combler les trous courts, PUIS supprimer la parole courte
     tl = tl.support(collar=min_silence)
     tl = Timeline([seg for seg in tl if seg.duration >= min_speech], uri=uri)
     return tl
