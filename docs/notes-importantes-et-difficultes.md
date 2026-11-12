@@ -91,6 +91,8 @@ optimal vers 2.0 s
 - Parole VAD sans label : 3.33% -> frames que la VAD a classées en parole, mais qu’aucune window ne couvre -> moment ou qqun parle mais aucun locuteur n'y est attribué -> pourquoi ?
 - Parole départagée     : 4.17% -> Ce sont les frames où les windows qui les couvrent sont en désaccord à égalité. C’est le score au centroïde qui tranche (n_tie).
 
+ATTANTION : La parole occupe 92,3 % du temps dans les fichiers de réglage. Une VAD qui marquerait tout comme parole aurait donc déjà 8,3 % de FA et 0 % de MISS. La marge de gain se situe surtout du côté des fausses alarmes.
+
 ***CONCLUSION*** : La VAD n'est pas un gros facteur limitant, à voir comme amélioration secondaire, mais en departageant simplement les 3.33% (ou 2.24% pour la vad pas en mode oracle), on peut gagner simplement
 
 Le false alarm disparaît (−4,14 points), comme attendu.
@@ -142,3 +144,23 @@ tous environs les mmes points en communs :
 -> nbre de speakers important
 
 la vad par energie est completement inefficace sur ces fichiers et le clustering a du mal, mme en connaissant le nombre de speaker.
+
+## OBSERVATIONS : amelioration de la vad par claude code : 
+temps de calcul multiplié par 3 : RTF 0.001 ou 2 avant -> 0.003 ou 5 mtn
+
+┌────────────────────────────────────────────────┬───────────────────────┬────────┬────────┬─────────────────────┐
+│                      Jeu                       │          VAD          │   FA   │  Miss  │ Erreur de détection │
+├────────────────────────────────────────────────┼───────────────────────┼────────┼────────┼─────────────────────┤
+│ Réglage (90 fichiers dev)                      │ energy_vad (actuelle) │ 4,18 % │ 2,47 % │ 6,65 %              │
+├────────────────────────────────────────────────┼───────────────────────┼────────┼────────┼─────────────────────┤
+│ Réglage (90 fichiers dev)                      │ gmm_vad (nouvelle)    │ 2,33 % │ 2,09 % │ 4,41 %              │
+├────────────────────────────────────────────────┼───────────────────────┼────────┼────────┼─────────────────────┤
+│ Test (90 fichiers, jamais utilisé pour régler) │ energy_vad (actuelle) │ 7,66 % │ 3,39 % │ 11,05 %             │
+├────────────────────────────────────────────────┼───────────────────────┼────────┼────────┼─────────────────────┤
+│ Test (90 fichiers, jamais utilisé pour régler) │ gmm_vad (nouvelle)    │ 4,10 % │ 2,52 % │ 6,62 %              │
+└────────────────────────────────────────────────┴───────────────────────┴────────┴────────┴─────────────────────┘
+
+- Ce qui a marché : gmm_vad utilise deux modèles statistiques, un pour la parole et un pour le reste, calculés à partir de caractéristiques du son (MFCC). Ils sont entraînés sur les 126 fichiers dev qui ne servent pas au réglage. Il n'y a aucun réseau pré-entraîné ni nouvelle dépendance (seulement sklearn, déjà installé). Sur le test, 74 fichiers s'améliorent et 16 se dégradent.
+- Ce qui n'a pas marché : régler autrement la VAD par énergie plafonne vers 6,6 % sur le réglage. Le seuil du nouveau modèle change très peu le résultat.
+- Erreurs restantes : ce sont surtout des fausses alarmes, concentrées sur quelques fichiers du test (wprog, wemos, kvkje, diysk). L'agent pense qu'il s'agit de musique ou de bruit de foule, mais il ne les a pas écoutés.
+- Pas encore mesuré : l'effet sur le DER complet du pipeline de diarisation.

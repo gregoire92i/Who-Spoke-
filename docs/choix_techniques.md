@@ -1,6 +1,6 @@
 # Choix techniques — Who Spoke ?
 
-> Journal des décisions techniques du projet, organisé par thème. Dernière mise à jour : 04/11/2026.
+> Journal des décisions techniques du projet, organisé par thème. Dernière mise à jour : 12/11/2026.
 
 ## Mode d'emploi
 
@@ -21,7 +21,7 @@ Format d'une entrée :
 
 Les champs marqués *à compléter* n'ont pas été notés au moment de la décision.
 
-Deux décisions sont **recopiées intégralement** depuis d'autres fichiers :
+⚠️ Deux décisions sont **recopiées intégralement** depuis d'autres fichiers :
 
 - D-10, recopiée depuis `docs/decision_corpus.md` ;
 - D-30 à D-37, recopiées depuis le fichier « Décisions d'évaluation ».
@@ -125,7 +125,7 @@ Deux décisions sont **recopiées intégralement** depuis d'autres fichiers :
 | **Conditions d'enregistrement** | Contrôlées : 3 salles, participants assis, micros-casques et micros de table. Deux tiers de jeux de rôle scénarisés | Non contrôlées : bruit, musique, rires, montage TV, distances au micro variables. **Non scénarisé** |
 | **Chevauchement de parole** | Élevé : environ 16 % (étude tierce, même méthode que pour VoxConverse) | Faible en comparaison : 3,1 à 3,8 % du temps de parole en moyenne (auteurs), 3,5 % (même étude tierce), de 0 à environ 30 % selon les fichiers |
 | **Qualité des annotations** | Transcription manuelle, mais instants des mots obtenus par alignement automatique. Frontières potentiellement « larges » (pauses incluses dans les segments, cf. arXiv 2507.09226) | Semi-automatique puis vérification humaine ; frontières à 0,1 s près, coupure aux pauses de plus de 0,25 s ; désaccord entre deux annotateurs d'environ 1 % de DER |
-| **Répétition des locuteurs** | **Structurelle au sein d'une série** : une même équipe de 4 mène les 4 réunions a, b, c, d d'une série scénarisée (fortement probable, non écrit explicitement, à vérifier dans les RTTM). **Entre séries** : groupes différents (≈ 30 répétitions du scénario), un recouvrement avéré (IB4005), le reste non documenté | Possible pour des personnalités publiques, **non documentée** \[À VÉRIFIER\] |
+| **Répétition des locuteurs** | **Structurelle au sein d'une série** : une même équipe de 4 mène les 4 réunions a, b, c, d d'une série scénarisée (fortement probable, non écrit explicitement, à vérifier dans les RTTM). **Entre séries** : groupes différents (≈ 30 répétitions du scénario), un recouvrement avéré (IB4005), le reste non documenté | Possible pour des personnalités publiques, **non documentée** [À VÉRIFIER] |
 | **Recouvrement avec l'entraînement de pyannote** | Oui (corpus listé), splits non précisés | Oui (corpus listé), **fichiers utilisés inconnus** |
 
 **VoxConverse par rapport à AMI**
@@ -273,23 +273,57 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
 - **Décision** : tirage stratifié emboîté.
   - Les strates : 3 tiers de nombre de locuteurs × 3 tiers de taux d'overlap × 3 tiers de % de parole, soit 27 sous-batchs.
   - Le tirage est proportionnel, avec la méthode des plus grands restes.
-  - Il utilise `random.Random(seed)`, avec `seed=42`.
+  - Il utilise `random.Random(seed)`, avec `seed=``130`.
   - La liste des fichiers est triée (`sorted`) avant le tirage.
   - Fonction : `get_representative_sample` dans `rttm_files.py`.
 - **Justification** : la comparaison visuelle sample vs dev complet (`Data_vizualizer.py`, figures `sample_vs_dev_*.png`) montre des distributions très proches.
+- **Vérification (04/11/2026)** : tests pytest (`tests/test_sampling.py`), SMD et statistique D de Kolmogorov-Smirnov (`sample_checks.py`).
+  - Sur 40 fichiers, le sample n'est **pas représentatif**. Exemple avec 40 fichiers et seed 42 : biais vers les fichiers courts, avec peu de locuteurs et peu d'overlap (SMD duration −0,34, n_speakers −0,28).
+  - Sur 80 à 100 fichiers, la même fonction donne un sample **représentatif**.
+  - Conséquence sur la taille du sample : voir D-24.
 
 ### D-23 — Pas de liste versionnée du sous-ensemble
 
 - **Date** : 03/11/2026
-- **Statut** : actif
+- **Statut** : remplacé par D-25
 - **Options** :
   - écrire la liste des fichiers tirés dans un fichier versionné ;
   - ne pas l'écrire.
 - **Décision** : pas de liste versionnée.
 - **Justification** :
   - la reproductibilité est assurée par la seed et le tri préalable ;
-  - la taille du sample reste modifiable : 30 fichiers au départ, 40 pour les sanity checks.
+  - la taille du sample reste modifiable : 40 fichiers.
 - **Revoir si** : les fichiers du dossier changent, ce qui changerait le tirage à seed égale.
+
+### D-24 — Taille du sous-ensemble selon l'étape : 40 fichiers pour la VAD, 90 ensuite
+
+- **Date** : 04/11/2026
+- **Statut** : actif
+- **Contexte** : le dev ne contient que 216 fichiers. Il est difficile d'obtenir un tirage représentatif avec un très petit nombre de fichiers.
+- **Options** :
+  - un sample de 40 fichiers : rapide, mais non représentatif d'après les tests (D-22) ;
+  - un sample de 80 à 100 fichiers : représentatif, mais plus long à calculer ;
+  - tout le dev.
+- **Décision** :
+  - réglage de la VAD : sample de **4****0 fichiers** ;
+  - réglages suivants : sample de **90 fichiers** ;
+  - confirmation sur tout le dev maintenue (D-21).
+- **Justification** :
+  - les tests de représentativité (D-22) montrent qu'un sample de 40 fichiers n'est pas représentatif, alors qu'avec la même fonction un sample de 80 à 100 fichiers l'est ;
+  - pour la VAD, un sample parfaitement représentatif n'est pas nécessaire, et 40 fichiers accélèrent le calcul.
+- **Revoir si** : les réglages de la VAD trouvés sur 40 fichiers ne se confirment pas sur tout le dev.
+
+### D-25 — Échantillons de 40 et 90 fichiers sauvegardés en RTTM
+
+- **Date** : 04/11/2026
+- **Statut** : actif
+- **Contexte** : rendre le code reproductible. Jusqu'ici, les échantillons étaient seulement recalculés à partir de la seed (D-23).
+- **Options** :
+  - recalculer le tirage à chaque exécution avec la seed (D-23) ;
+  - sauvegarder les échantillons dans des fichiers RTTM.
+- **Décision** : les deux échantillons, **40 fichiers** et **90 fichiers**, sont sauvegardés au format RTTM. Emplacement : *à préciser*.
+- **Justification** : reproductibilité du code.
+- **Revoir si** : *à compléter*
 
 ## 4. Protocole d'évaluation
 
@@ -325,7 +359,7 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
   - le DER moderne est l'approche actuelle ;
   - le DER forgiving permet d'isoler l'effet de l'overlap, qu'une baseline mono-locuteur ne peut pas traiter.
 
-### D-33 — UEM = \[0, durée réelle de l'audio\]
+### D-33 — UEM = [0, durée réelle de l'audio]
 
 - **Date** : 03/11/2026
 - **Statut** : actif
@@ -361,9 +395,13 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
   - Check 1 : référence vs référence, DER attendu = 0.
   - Check 2 : hypothèse « un seul locuteur », construite en mémoire avec `Annotation.from_records`.
 - **Résultat observé du check 2** :
-  - conditions : 40 fichiers dev (D-22), DER moderne, collar 0, UEM \[0, durée\], micro ;
+  - conditions : 40 fichiers dev (D-22), DER moderne, collar 0, UEM [0, durée], micro ;
   - DER = **53,66 %** (FA 10,34 %, missed 2,50 %, confusion 40,81 %) ;
-  - c'est le **plancher que la baseline doit battre**.
+  - c'est le **plancher que la baseline doit battre**** sur ce sample du dev**.
+- **Mise à jour du 09/11/2026 : check 2 sur les 90 fichiers du test** :
+  - conditions : `samples/test/sample90_seed130.rttm` (D-22, D-25), DER moderne, collar 0, UEM [0, durée], micro ;
+  - DER = **56,7 %** ;
+  - c'est le plancher de référence pour les résultats de la baseline et de pyannote mesurés sur ces 90 fichiers.
 - **Cas relevé** : pqmho.
   - 14,92 s de parole annotée, le reste est de la musique.
   - L'écoute du 04/11 confirme que les annotations sont correctes.
@@ -415,14 +453,49 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
 - **Décision** : `librosa.feature.rms(S=...)`. Fonction `energy_vad`, écrite par Grégoire.
 - **Justification** : on réutilise la STFT déjà calculée. *À compléter.*
 
-### D-53 — Seuil de la VAD : relatif au maximum du fichier, −23 dB
+### D-53 — Seuil de la VAD : relatif au maximum du fichier, −30 dB
+
+- **Date** : 04/11/2026, révisée le 05/11/2026
+- **Statut** : provisoire
+- **Historique** : −23 dB (choisi à l'œil sur ysgbf, 04/11), puis −30 dB (grid search, 05/11).
+- **Options** : seuil absolu (même valeur pour tous les fichiers) ; seuil relatif au maximum du fichier ; seuil automatique (Otsu, GMM).
+- **Décision** : seuil à **−30 dB** sous le maximum de RMS du fichier.
+- **Justification** : grid search `eval_vad.py` (seuil de −50 à −10 dB par pas de 2 × `min_silence` × `min_speech`).
+  - Conditions : 40 fichiers dev, `get_representative_sample` avec seed 130, `DetectionErrorRate`, collar 0, UEM [0, durée wav], agrégation micro.
+  - Meilleur résultat observé : −30 dB, `min_silence` = 0,5 s, `min_speech` = 0,3 s → parole reconnue 98,15 %, fausses alarmes 4,08 %, detection error **5,92 %**.
+  - Les seuils voisins donnent presque le même résultat (−28 dB : 6,06 % ; −32 dB : 6,03 %) : le minimum est plat, donc le réglage est robuste.
+- **Revoir si** : le résultat ne se confirme pas sur tout le dev (D-21).
+
+### D-54 — Smoothing de la VAD : durées minimales d'abord, hystérésis ensuite
 
 - **Date** : 04/11/2026
 - **Statut** : provisoire
-- **Options** : *à compléter*
-- **Décision** : seuil à −23 dB sous le maximum de RMS du fichier.
-- **Justification** : valeur de départ choisie à l'œil sur le fichier ysgbf (visualisation RMS + seuil + zones de référence). Elle sera affinée sur le sous-ensemble dev.
-- **Revoir si** : la detection error (D-35) sur le sous-ensemble dev montre un meilleur seuil.
+- **Contexte** : la décision brute trame par trame (seuil D-53) « clignote » : petits trous dans la parole (pauses entre syllabes, consonnes faibles) et petites fausses alarmes (clics, respirations).
+- **Options** :
+  - median filter sur les décisions 0/1 (taille de kernel en trames) ;
+  - hystérésis : deux seuils, `onset` pour entrer en parole et `offset` pour en sortir ;
+  - durées minimales sur les segments : combler les silences < `min_silence`, supprimer la parole < `min_speech`.
+- **Décision** :
+  - durées minimales implémentées en premier : `Timeline.support(collar=min_silence)`, **puis** suppression des segments < `min_speech` (dans cet ordre) ;
+  - hystérésis ajoutée ensuite, comme variante mesurée en ablation ;
+  - valeurs des paramètres à fixer par grid search sur le sous-ensemble dev (D-21), avec la detection error (D-35).
+- **Justification** : *à compléter*
+- **Revoir si** : la detection error sur le sous-ensemble dev ne s'améliore pas par rapport à la décision brute, ou si l'hystérésis apporte davantage.
+
+### D-55 — Embeddings par fenêtre glissante : fenêtre 1,0 s, hop 0,5 s
+
+- **Date** : 05/11/2026
+- **Statut** : provisoire
+- **Contexte** : il faut résumer les trames MFCC (hop 10 ms) en un embedding par fenêtre. L'enjeu est de choisir la taille des fenêtres en minimisant les fenêtres mélangées, c'est-à-dire celles qui contiennent plusieurs locuteurs.
+- **Options** :
+  - 1,0 s / hop 0,5 s ;
+  - 1,5 s / hop 0,75 s (recette x-vector Kaldi CALLHOME) ;
+  - 2–3 s / hop 1 s.
+- **Décision** : fenêtre de 1,0 s, hop de 0,5 s (recouvrement de 50 %) pour la baseline.
+- **Justification** :
+  - c'est un compromis : une grande fenêtre donne des statistiques plus stables, donc une identification du locuteur plus précise ; mais plus elle est grande, plus le risque est élevé qu'elle contienne plusieurs locuteurs mélangés ;
+  - on pourra comparer avec des résultats comme les x-vectors de Kaldi CALLHOME, qui utilisent le même genre de fenêtre. Attention : Kaldi utilise 1,5 s / 0,75 s. Le rapport de recouvrement (50 %) est le même, mais pas l'échelle, donc la comparaison reste approximative.
+- **Revoir si** : la proportion de fenêtres mélangées mesurée sur les RTTM, ou une ablation sur la taille de fenêtre, montre qu'une autre taille est meilleure.
 
 ## 7. Organisation du travail
 
@@ -436,11 +509,46 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
   - B : faire une baseline minimale puis passer à pyannote.
 - **Décision** : A, appliquée de fait.
 
+### D-61 — Délégation des tâches
+
+- **Date** : 12/11/2026
+- **Statut** : actif
+- **Contexte** : le projet dure 3 semaines. Les tâches répétitives et chronophages (balayages de paramètres, tests, itérations sur une variante) prennent du temps au détriment de la conception, de la vérification et de l'interprétation.
+- **Options** :
+  - A : tout faire soi-même ;
+  - B : déléguer les tâches répétitives de test à Claude Code (subagent), et garder la conception, les choix et l'interprétation.
+- **Décision** : B. Première application : l'amélioration de la VAD est confiée au subagent Claude Code `vad-tester` (`.claude/agents/vad-tester.md`). Il travaille uniquement dans `vad.py`, sans réseau de neurones pré-entraîné ni VAD existante (pyannote, SpeechBrain…), en boucle réflexion → hypothèse → test → analyse → interprétation, et il rédige un journal et un rapport des changements par rapport à la VAD d'origine.
+- **Répartition** :
+  - Grégoire (valeur ajoutée) : définir l'objectif, les contraintes et le protocole (données, métriques, interdits) ; vérifier les résultats (fuite, reproductibilité, cohérence des chiffres) ; interpréter ; décider ; intégrer au pipeline ;
+  - Claude Code : implémenter et tester les variantes, itérer, tenir le journal, rédiger le rapport.
+- **Justification** : Claude est très efficace sur les tâches répétitives et les tests chronophages. Le journal et le rapport de l'agent gardent la traçabilité de ce qui a été délégué.
+- **Revoir si** : les résultats de l'agent ne sont pas reproductibles, s'il ne respecte pas le protocole (fuite, fichiers interdits), ou si le temps de vérification dépasse le temps gagné.
+
+### D-62 — Améliorations présentées au rendu
+
+- **Date** : 12/11/2026
+- **Statut** : actif (amélioration n°1) ; amélioration n°2 non décidée
+- **Contexte** : le rendu exige au minimum 2 améliorations de la baseline, et une ablation sur 2 améliorations.
+- **Options** :
+  - amélioration de la VAD par Claude Code (`vad_stack`, D-61) ;
+  - autres pistes du rapport intermédiaire : clustering, taille des windows d'embedding, détection de la musique.
+- **Décision** : l'amélioration de la VAD (`vad_stack`) est l'une des 2 améliorations présentées et ablées dans le rapport. La seconde reste à choisir.
+- **Justification** :
+  - gain mesuré par l'agent sur la detection error (FA + Miss) : 6,649 % → 3,131 % sur le réglage (dev sample 90) ; 11,045 % → 5,761 % sur le test sample 90 (modèles dev-train) ;
+  - le diagnostic VAD oracle (11/11) montrait une marge sur le DER moderne : 33,49 % → 28,67 % avec une VAD parfaite.
+- **Points de vigilance** :
+  - l'effet sur le DER du pipeline complet n'est pas encore mesuré : c'est lui qui compte pour l'ablation ;
+  - l'agent a consulté le test 4 fois (selon son rapport, sans choix fait d'après le test) ;
+  - la version « production » est entraînée sur tout le dev : seule la version dev-train est évaluable sur le dev ;
+  - la VAD est un classifieur appris (HistGradientBoosting en 2 étages), et non plus une règle de traitement du signal.
+- **Revoir si** : le DER du pipeline complet avec `vad_stack` ne s'améliore pas par rapport à `energy_vad`.
+- **Source** : rapport du subagent, dans les documents du projet (`claude/vad_agent/rapport_vad_agent.md`).
+
 ## Décisions ouvertes
 
 | Sujet | Options envisagées |
 | --- | --- |
-| Smoothing de la VAD | median filter / hystérésis / durées minimales |
+| Smoothing de la VAD | durées minimales retenues en premier (D-54) ; hystérésis à ajouter ensuite ; median filter non retenu pour l'instant |
 | Segmentation et clustering de la baseline | agglomératif / spectral / k-means ; nombre de locuteurs connu ou estimé |
 | Modèles de la semaine 2 | A : modèles pré-entraînés / B : fine-tuning |
 | Corpus de test secondaire | A : enregistrements maison seuls / B : + Simsamu (FR) / C : + SUMM-RE (FR) |
@@ -448,3 +556,4 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
 | Organisation du code | module séparé réutilisable (ex. `viz.py`), probable |
 | Machine d'entraînement | PC fixe (RTX 3070, 8 Go) / Google Colab / autre |
 | Métriques de clustering | purity, coverage, speaker count error |
+| Seconde amélioration pour le rendu (D-62) | clustering / taille des windows d'embedding / détection de la musique |

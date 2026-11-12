@@ -302,6 +302,9 @@ def save_sample_rttm(sample, output_path, split_files=False):
 #dev
 #save_sample_rttm(get_representative_sample("data/voxconverse/annotations/dev", "data/voxconverse/dev/audio", 40),"samples/sample40_seed130.rttm")
 #save_sample_rttm(get_representative_sample("data/voxconverse/annotations/dev", "data/voxconverse/dev/audio", 90),"samples/sample90_seed130.rttm")
+#rttm avec tt le dev (plus simple avec la structure du code) :
+#save_sample_rttm(get_representative_sample("data/voxconverse/annotations/dev", "data/voxconverse/dev/audio", 216,all=True),"samples/all_dev.rttm")
+
 #tests
 #save_sample_rttm(get_representative_sample("data/voxconverse/annotations/test", "data/voxconverse/test/voxconverse_test_wav", 40),"samples/test/sample40_seed130.rttm")
 #save_sample_rttm(get_representative_sample("data/voxconverse/annotations/test", "data/voxconverse/test/voxconverse_test_wav", 90),"samples/test/sample90_seed130.rttm")

@@ -13,6 +13,7 @@ from pyannote.metrics.detection import DetectionErrorRate
 from pyannote.metrics.diarization import DiarizationErrorRate, JaccardErrorRate
 #loading pipeline functions
 from audio_features import load_audio, FFT, energy_vad, compute_mfcc
+from vad import best_vad
 from embeddings import compute_embeddings
 from clustering import spectral_clustering
 from post_treatment import windows_to_annotation
@@ -55,11 +56,10 @@ def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size):# * fo
     audio = load_audio(str(path), sr)
     #2 trames, fenêtre de Hann, STFT
     D = FFT(audio, frame_size=frame_size, hop_size=hop_size)
-    del audio#plus utilisé, on le libère tout de suite pour la ram bb
     #3 VAD
-    vad = energy_vad(D, sr=sr, frame_size=frame_size, hop_size=hop_size, seuil_db=seuil_db,
-                     min_silence=min_silence, min_speech=min_speech, uri=uri)
-    #4 MFCC (sur la même STFT que la VAD)
+    vad = best_vad(audio, uri=uri, train="alldev")# prends directement l'audio car a ses propres parametres de trames 
+    del audio#plus utilisé, on le libère tout de suite pour la ram bb
+    #4 MFCC
     mfcc = compute_mfcc(D, sr=sr, n_mfcc=n_mfcc)
     del D#la STFT est l'objet le plus lourd (~250 Mo pour 10 min d'audio)
     #5 embeddings par fenêtre glissante

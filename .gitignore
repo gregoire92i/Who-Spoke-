@@ -10,3 +10,7 @@ data/
 *.wav
 *.mp3
 *.flac
+
+#VAD agent : données régénérables (python vad.py cache ... ; les .npz sont recalculés au réentraînement)
+results/vad_agent/cache/
+results/vad_agent/models/*.npz
