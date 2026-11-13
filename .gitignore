@@ -14,3 +14,9 @@ data/
 #VAD agent : données régénérables (python vad.py cache ... ; les .npz sont recalculés au réentraînement)
 results/vad_agent/cache/
 results/vad_agent/models/*.npz
+
+#diagnostic k oracle vs eigengap (agent clustering-embeddings-analyzer) : sorties intermédiaires régénérables
+results/diag_k_oracle_vs_eigengap/*_test2.csv
+results/diag_k_oracle_vs_eigengap/*_test3.csv
+results/diag_k_oracle_vs_eigengap/*.npz
+results/diag_k_oracle_vs_eigengap/*.log

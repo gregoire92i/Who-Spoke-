@@ -23,6 +23,7 @@ from embeddings import compute_embeddings
 from clustering import spectral_clustering
 from post_treatment import windows_to_annotation
 from metrics_and_sanity_checks import sanity_check1_ref, sanity_check2_1speaker
+from vad import best_vad
 
 
 #### PARAMÈTRES ####
@@ -42,7 +43,7 @@ stats, drop_c0, mode = "mean_std", False, "segment" #->à verifier
 collar = 0.0#D-30 : même collar pour les sanity checks et la baseline
 
 #ORACLE : composants remplacés par la vérité terrain (un seul à True à la fois)
-oracle_vad = True#True : VAD = parole de la référence (chevauchements fusionnés)
+oracle_vad = False#True : VAD = parole de la référence (chevauchements fusionnés)
 oracle_k = False#True : nombre de locuteurs lu dans le RTTM ; False : eigengap (remplace `oracle` de baseline.py)
 oracle_vote = False#True : vote oracle dans windows_to_annotation (nécessite ref et mapping)
 
@@ -69,13 +70,13 @@ def diarize_file(path, uri, ref, uem, *, frame_size, hop_size):# * force la defi
     audio = load_audio(str(path), sr)
     #2 trames, fenêtre de Hann, STFT
     D = FFT(audio, frame_size=frame_size, hop_size=hop_size)
-    del audio#plus utilisé, on le libère tout de suite pour la ram bb
     #3 VAD (ORACLE : parole de la référence, chevauchements fusionnés par support, coupée à l'UEM)
     if oracle_vad:
         vad = ref.get_timeline().support().crop(uem)
+        del audio#plus utilisé, on le libère tout de suite pour la ram bb
     else:
-        vad = energy_vad(D, sr=sr, frame_size=frame_size, hop_size=hop_size, seuil_db=seuil_db,
-                         min_silence=min_silence, min_speech=min_speech, uri=uri)
+        vad = best_vad(audio, uri=uri, train="alldev")
+        del audio#plus utilisé, on le libère tout de suite pour la ram bb
     #4 MFCC (sur la même STFT que la VAD)
     mfcc = compute_mfcc(D, sr=sr, n_mfcc=n_mfcc)
     del D#la STFT est l'objet le plus lourd (~250 Mo pour 10 min d'audio)

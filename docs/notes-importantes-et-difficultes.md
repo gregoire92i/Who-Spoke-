@@ -48,11 +48,38 @@ agrégation de plusieurs fichiers -> micro, car plus représentatif.
 
 - detection error=(FA+MISS)/speaking duration
 
+### evaluation des embbedings : 
+- L'AUC mesure si les embeddings permettent de distinguer deux windows du même locuteur de deux windows de locuteurs différents
+L'AUC est la probabilité qu'une paire « même locuteur » prise au hasard soit plus similaire qu'une paire « locuteurs différents » prise au hasard :
+- 1 : séparation parfaite, toutes les paires « même locuteur » sont au-dessus ;
+- 0,5 : hasard, la similarité ne dit rien sur le locuteur ;
+- moins de 0,5 : c'est inversé, des locuteurs différents se ressemblent plus que le même locuteur entre ses windows.
+
+Dans notre cas, l'AUC se calcule ainsi :
+
+Notations
+
+Dans un fichier, chaque paire de windows (i, j) a une similarité s(i, j) = cos(eᵢ, eⱼ), où eᵢ est l'embedding de la window i.
+
+- P = ensemble des paires « même locuteur » (positives), de taille |P|
+- N = ensemble des paires « locuteurs différents » (négatives), de taille |N|
+
+Formule
+
+$$
+\text{AUC} = \frac{1}{|P|,|N|} \sum_{p \in P} \sum_{n \in N} \Big( \mathbb{1}[s_p > s_n] + \tfrac{1}{2},\mathbb{1}[s_p = s_n] \Big)
+$$
+
+- 𝟙[condition] vaut 1 si la condition est vraie, 0 sinon ;
+- on compare chaque paire positive à chaque paire négative ;
+- une égalité compte pour ½.
+
 ### Evaluation du clustering
 A cofnirmer plus tard : 
 - Purity ->Chaque cluster du système contient-il un seul vrai locuteur ? - equivalent to accuracy
 - Coverage -> Chaque vrai locuteur est-il rassemblé dans un seul cluster ? -> equivalent to recall ? -> CHECK - OK
 - Speaker count error -> Écart entre nombre de locuteurs prédit et réel
+- ARI 0,0 : l’Adjusted Rand Index compare les clusters trouvés à la vérité. 1 = parfait, 0 = pas mieux que le hasard.
 
 ### Mesure des Couts de calcul
 - RTF (Real-Time Factor) = temps de traitement / durée de l'audio -> si =1 -> audio traité aussi vite que sa durée reelle 
@@ -164,3 +191,25 @@ temps de calcul multiplié par 3 : RTF 0.001 ou 2 avant -> 0.003 ou 5 mtn
 - Ce qui n'a pas marché : régler autrement la VAD par énergie plafonne vers 6,6 % sur le réglage. Le seuil du nouveau modèle change très peu le résultat.
 - Erreurs restantes : ce sont surtout des fausses alarmes, concentrées sur quelques fichiers du test (wprog, wemos, kvkje, diysk). L'agent pense qu'il s'agit de musique ou de bruit de foule, mais il ne les a pas écoutés.
 - Pas encore mesuré : l'effet sur le DER complet du pipeline de diarisation.
+
+
+## LE CLUSTERING SPECTRAL, DES OBSERVATIONS PLEINES DE SURPRISES 
+
+***OBSERVATION 1*** : sur le fichier problématique mentionné plus tot : tucrg | DER 474.2% | k 3 (réf 3) | RTF 0.002 (semble etre un concert)
+le DER baisse considérablement avec la nouvelle vad mais L ESTIMATION DU NOMBRE DE SPEAKER QUI ETAIT CORRECTE DEVIENT FAUSSE : [73/90] tucrg | DER 48.1% | k 1 (réf 3) | RTF 0.007
+hypothese : le nombre de locuteur était correcte par "chance" il devait se baser sur la musique et prendre celle-ci pour un locuteur
+conclusion : ? 
+
+*** OBSERVATION 2 *** : lorsque le nombre de locuteurs reel est connu par l'algorithme de clustering, le DER augmente ET u contraire Le JER s'améliore : de 61,13 à 53,46 %.
+
+hypothese 1 : les embeddings etant bruité, on a des windows bruités eloignés des autres clusters, or le clustering spectral à tendance à vouloir former ces windows à former un cluster différent : force des clusters "artificiels" à se creer, on force des découpages en cluster que le clustering n'avait pas fais par lui meme. 
+
+observations : le locuteur dominant est découpé : il occupe 2,96 clusters en moyenne, au lieu de 1,28 avec l'eigengap.
+
+## À REVOIR : p_neighbors du clustering spectral (noté par Claude Code, 12/11)
+- Fonctionnement : chaque window garde comme voisins ses p windows les plus similaires (cosinus), p = max(min_neighbors, round(p_neighbors × n)), n = nb de windows du fichier. Défaut p_neighbors = 0.1 (10 %).
+- Problème : un locuteur qui a moins de p windows (moins de 10 % du fichier) est obligé de prendre des voisins chez les autres -> il est absorbé par le locuteur majoritaire. Probablement fréquent dans VoxConverse (présentateur dominant).
+- Test synthétique (nuages gaussiens, PAS de vraies données) : groupes [300, 15] -> p = 0.1 : k = 1, ARI 0.0 ; p = 0.03 : k = 2, ARI 1.0. Groupes [400, 20, 20] -> p = 0.1 : k = 2, ARI 0.908 ; p = 0.03 : k = 3, ARI 0.955.
+- Détail : une window se compte parmi ses propres voisins (cosinus avec elle-même = 1) -> p - 1 voisins réels.
+***INTERESSANT***:
+- Pistes : balayage de p_neighbors sur le dev (sample 90), ou choix automatique de p par fichier comme dans NME-SC (candidat d'amélioration pour l'ablation).

@@ -49,7 +49,8 @@ def spectral_clustering(X, oracle=False, n_speakers=None, p_neighbors=0.1, min_n
     A = X @ X.T                                         # (n, n)
  
     # --- 3. raffinement : pour chaque ligne, on ne garde que les p % voisins les plus similaires ---
-    # (binarisation, comme NME-SC) : 1 = « probablement le même locuteur », 0 sinon
+    # (binarisation, idée reprise de NME-SC ; pas NME-SC complet : ici Laplacien normalisé + p fixe,
+    # NME-SC utilise le Laplacien non normalisé et choisit p automatiquement) : 1 = « probablement le même locuteur », 0 sinon
     # min_neighbors : sur un fichier court (peu de fenêtres), p_neighbors * n donnerait 1 ou 2 voisins,
     # le graphe se casserait en dizaines de morceaux et toutes les valeurs propres vaudraient 0
     p = min(n, max(min_neighbors, int(round(p_neighbors * n))))

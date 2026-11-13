@@ -35,6 +35,10 @@ n_mfcc = 13
 win_s, hop_s, min_s = 2.0, 1.0, 0.5#fenêtres des embeddings (s)
 stats, drop_c0, mode = "mean_std", False, "segment"
 oracle = False#True : nombre de locuteurs lu dans le RTTM ; False : eigengap
+min_speakers, max_speakers = 1, 20#bornes de k pour l'eigengap (ignorées si oracle)
+p_neighbors, min_neighbors = 0.02, 5#raffinement : fraction / nombre minimal de voisins gardés par window
+standardize = True#centrage-réduction des embeddings sur le fichier avant le cosinus
+seed = 42#graine du KMeans (reproductibilité)
 collar = 0.0#D-30 : même collar pour les sanity checks et la baseline
 #test
 # sample_rttm = "samples/test/sample90_seed130.rttm"
@@ -66,7 +70,10 @@ def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size):# * fo
     X, win_segs = compute_embeddings(mfcc, vad, win_s=win_s, hop_s=hop_s, min_s=min_s, stats=stats,
                                      drop_c0=drop_c0, mode=mode, sr=sr, hop_size=hop_size)
     #6 clustering spectral
-    labels, info = spectral_clustering(X, oracle=oracle, n_speakers=n_ref_speakers, return_info=True)
+    labels, info = spectral_clustering(X, oracle=oracle, n_speakers=n_ref_speakers,
+                                       min_speakers=min_speakers, max_speakers=max_speakers,
+                                       p_neighbors=p_neighbors, min_neighbors=min_neighbors,
+                                       standardize=standardize, seed=seed, return_info=True)
     #7 fenêtres -> trames -> Annotation
     hyp, post = windows_to_annotation(labels, X, win_segs, vad, n_frames=mfcc.shape[1], uri=uri,
                                       sr=sr, hop_size=hop_size, return_info=True)

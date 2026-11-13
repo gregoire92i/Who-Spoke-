@@ -54,7 +54,6 @@ La VAD a une marge de gain d'environ 5 points de DER (VAD oracle).
 - [ ] Tableau comparatif baseline / variantes / pyannote (DER, JER, RTF, cas d'échec).
 - [ ] Démo : charger un audio, timeline des locuteurs, écoute des segments, export RTTM ou JSON.
 - [ ] README de reproduction et fiche des corpus à jour.
-- [ ] Mettre à jour `docs/choix_techniques.md` dans le dépôt (D-61, D-62 manquent).
 - [ ] Soutenance.
 ## Points de vigilance
  
