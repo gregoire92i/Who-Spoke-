@@ -213,3 +213,18 @@ observations : le locuteur dominant est découpé : il occupe 2,96 clusters en m
 - Détail : une window se compte parmi ses propres voisins (cosinus avec elle-même = 1) -> p - 1 voisins réels.
 ***INTERESSANT***:
 - Pistes : balayage de p_neighbors sur le dev (sample 90), ou choix automatique de p par fichier comme dans NME-SC (candidat d'amélioration pour l'ablation).
+
+## AMÉLIORATION N°2 : NME-SC, p_neighbors choisi fichier par fichier (noté par Claude Code, 13/11)
+- Principe : pour chaque fichier, on teste 30 valeurs de p (de min_neighbors = 5 à 25 % des windows) et on garde celle qui minimise r(p) = p / g_p (g_p = plus grand eigengap / plus grande valeur propre) : spectre net avec peu de voisins. k = eigengap à ce p. Code : `nme_spectral_clustering` dans `clustering.py` ; expérience : `nme_sc_experiment.py` ; résultats : `results/nme_sc/`.
+- Protocole : dev sample 90, VAD best_vad(train="devtrain") (pas de fuite), mêmes embeddings pour les 3 variantes, paramètres de baseline.py (max_speakers 20, seed 42), collar 0, micro. Test non consulté.
+
+| Variante | DER moderne | DER forgiving | JER | confusion |
+|---|---|---|---|---|
+| p fixe 0.02 (baseline actuelle) | 29,09 % | 26,21 % | 52,91 % | 21,15 % |
+| NME-SC, Laplacien normalisé (seul p change) | 27,39 % | 24,48 % | 54,85 % | 19,46 % |
+| NME-SC, Laplacien non normalisé (comme l'article) | 26,04 % | 23,11 % | 55,27 % | 18,10 % |
+
+- Observé : DER -1,7 / -3,05 pts mais JER +1,9 / +2,4 pts. Surestimation de k : 21 % -> 10 % / 8 % des fichiers ; sous-estimation : 34 % -> 47 % / 51 %. Gain concentré sur quelques fichiers (hiyis : k 18 -> 2, DER 84 % -> 1,5 %) ; autant de fichiers dégradés que améliorés (bauzd, lfzib, gzvkx, tlprc). Coût négligeable (RTF ≈ 0,01).
+- Attention : le « p fixe 0.02 » vaut en réalité 5 voisins (min_neighbors) sur 57 fichiers / 90.
+- Interprétation : NME-SC supprime les surestimations catastrophiques du graphe trop creux, au prix de plus de sous-estimations -> meilleur DER (oublier un petit locuteur coûte peu de secondes), moins bon JER (chaque locuteur compte autant). Même compromis DER / JER que pour le k oracle.
+- À vérifier : stabilité du gain (seeds, all_dev), effet de max_speakers = 20 sur le p fixe, choix de la variante pour l'ablation (normalisé = un seul changement).

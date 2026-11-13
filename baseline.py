@@ -15,7 +15,7 @@ from pyannote.metrics.diarization import DiarizationErrorRate, JaccardErrorRate
 from audio_features import load_audio, FFT, energy_vad, compute_mfcc
 from vad import best_vad
 from embeddings import compute_embeddings
-from clustering import spectral_clustering
+from clustering import spectral_clustering, nme_spectral_clustering
 from post_treatment import windows_to_annotation
 from metrics_and_sanity_checks import sanity_check1_ref, sanity_check2_1speaker
 
@@ -37,6 +37,9 @@ stats, drop_c0, mode = "mean_std", False, "segment"
 oracle = False#True : nombre de locuteurs lu dans le RTTM ; False : eigengap
 min_speakers, max_speakers = 1, 20#bornes de k pour l'eigengap (ignorées si oracle)
 p_neighbors, min_neighbors = 0.02, 5#raffinement : fraction / nombre minimal de voisins gardés par window
+clustering_method = "nme"#amélioration n°2 : "nme" = NME-SC (p choisi par fichier) ; "fixe" = p_neighbors fixe (ancienne baseline)
+nme_max_frac, nme_n_grid = 0.25, 30#NME-SC : grille de p = n_grid entiers entre min_neighbors et max_frac * n_windows
+nme_laplacian = "normalized"#NME-SC : "normalized" (seul le choix de p change) ou "unnormalized" (comme l'article)
 standardize = True#centrage-réduction des embeddings sur le fichier avant le cosinus
 seed = 42#graine du KMeans (reproductibilité)
 collar = 0.0#D-30 : même collar pour les sanity checks et la baseline
@@ -70,15 +73,25 @@ def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size):# * fo
     X, win_segs = compute_embeddings(mfcc, vad, win_s=win_s, hop_s=hop_s, min_s=min_s, stats=stats,
                                      drop_c0=drop_c0, mode=mode, sr=sr, hop_size=hop_size)
     #6 clustering spectral
-    labels, info = spectral_clustering(X, oracle=oracle, n_speakers=n_ref_speakers,
-                                       min_speakers=min_speakers, max_speakers=max_speakers,
-                                       p_neighbors=p_neighbors, min_neighbors=min_neighbors,
-                                       standardize=standardize, seed=seed, return_info=True)
+    if clustering_method == "nme":
+        labels, info = nme_spectral_clustering(X, oracle=oracle, n_speakers=n_ref_speakers,
+                                               min_speakers=min_speakers, max_speakers=max_speakers,
+                                               min_neighbors=min_neighbors, max_frac=nme_max_frac,
+                                               n_grid=nme_n_grid, laplacian=nme_laplacian,
+                                               standardize=standardize, seed=seed, return_info=True)
+    elif clustering_method == "fixe":
+        labels, info = spectral_clustering(X, oracle=oracle, n_speakers=n_ref_speakers,
+                                           min_speakers=min_speakers, max_speakers=max_speakers,
+                                           p_neighbors=p_neighbors, min_neighbors=min_neighbors,
+                                           standardize=standardize, seed=seed, return_info=True)
+    else:
+        raise ValueError(f"clustering_method doit valoir 'nme' ou 'fixe', reçu {clustering_method}")
     #7 fenêtres -> trames -> Annotation
     hyp, post = windows_to_annotation(labels, X, win_segs, vad, n_frames=mfcc.shape[1], uri=uri,
                                       sr=sr, hop_size=hop_size, return_info=True)
     stats_file = {
         "k_hyp": info["k"],
+        "p_neighbors_used": info.get("p"),#NME-SC : nombre de voisins choisi pour ce fichier (None si p fixe)
         "n_windows": len(X),
         "n_speech_frames": post["n_speech"],#trames de parole selon la VAD
         "n_uncovered": post["n_uncovered"],#trames de parole sans aucune fenêtre (comptées en missed)
