@@ -19,4 +19,13 @@ results/vad_agent/models/*.npz
 results/diag_k_oracle_vs_eigengap/*_test2.csv
 results/diag_k_oracle_vs_eigengap/*_test3.csv
 results/diag_k_oracle_vs_eigengap/*.npz
-results/diag_k_oracle_vs_eigengap/*.log
+
+#journaux d'exécution des scripts (sortie console redirigée) : régénérés à chaque run
+results/**/*.log
+
+#secrets (jetons Hugging Face / GitHub : variables d'environnement uniquement)
+.env
+.env.*
+
+#réglages locaux de Claude Code (propres à la machine)
+.claude/settings.local.json

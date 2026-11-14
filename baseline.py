@@ -64,7 +64,7 @@ def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size):# * fo
     #2 trames, fenêtre de Hann, STFT
     D = FFT(audio, frame_size=frame_size, hop_size=hop_size)
     #3 VAD
-    vad = best_vad(audio, uri=uri, train="alldev")# prends directement l'audio car a ses propres parametres de trames 
+    vad = best_vad(audio, uri=uri, train="traindev")# prends directement l'audio car a ses propres parametres de trames 
     del audio#plus utilisé, on le libère tout de suite pour la ram bb
     #4 MFCC
     mfcc = compute_mfcc(D, sr=sr, n_mfcc=n_mfcc)

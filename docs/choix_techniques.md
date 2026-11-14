@@ -1,6 +1,6 @@
 # Choix techniques — Who Spoke ?
 
-> Journal des décisions techniques du projet, organisé par thème. Dernière mise à jour : 12/11/2026.
+> Journal des décisions techniques du projet, organisé par thème. Dernière mise à jour : 14/11/2026 (D-56 à D-59 et révision de D-62 ajoutées par Claude Code à la demande de Grégoire, **à valider avec le mentor**).
 
 ## Mode d'emploi
 
@@ -468,8 +468,8 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
 
 ### D-54 — Smoothing de la VAD : durées minimales d'abord, hystérésis ensuite
 
-- **Date** : 04/11/2026
-- **Statut** : provisoire
+- **Date** : 04/11/2026 ; révisée le 14/11/2026
+- **Statut** : actif pour les durées minimales ; **hystérésis abandonnée** (14/11/2026)
 - **Contexte** : la décision brute trame par trame (seuil D-53) « clignote » : petits trous dans la parole (pauses entre syllabes, consonnes faibles) et petites fausses alarmes (clics, respirations).
 - **Options** :
   - median filter sur les décisions 0/1 (taille de kernel en trames) ;
@@ -481,11 +481,12 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
   - valeurs des paramètres à fixer par grid search sur le sous-ensemble dev (D-21), avec la detection error (D-35).
 - **Justification** : *à compléter*
 - **Revoir si** : la detection error sur le sous-ensemble dev ne s'améliore pas par rapport à la décision brute, ou si l'hystérésis apporte davantage.
+- **Révision du 14/11/2026 (décision de Grégoire)** : l'hystérésis (avec le lissage de l'énergie) est abandonnée. Elle augmentait le DER, et même mieux adaptée et mieux réglée, son impact attendu restait faible. La référence de la comparaison de l'amélioration n°1 (D-62) est donc `energy_vad` **sans hystérésis** : seuil simple −30 dB (D-53) + durées minimales. Dans le code actuel, cela correspond à `energy_vad(..., delta_db=0, smooth_frames=1)`, car `audio_features.py` active l'hystérésis par défaut (`delta_db = 3.18`, `smooth_frames = 3`). *Chiffres de la hausse du DER à compléter (aucun résultat de l'hystérésis n'est enregistré dans `results/`).*
 
 ### D-55 — Embeddings par fenêtre glissante : fenêtre 1,0 s, hop 0,5 s
 
 - **Date** : 05/11/2026
-- **Statut** : provisoire
+- **Statut** : remplacé par D-56 (11/11/2026)
 - **Contexte** : il faut résumer les trames MFCC (hop 10 ms) en un embedding par fenêtre. L'enjeu est de choisir la taille des fenêtres en minimisant les fenêtres mélangées, c'est-à-dire celles qui contiennent plusieurs locuteurs.
 - **Options** :
   - 1,0 s / hop 0,5 s ;
@@ -496,6 +497,54 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
   - c'est un compromis : une grande fenêtre donne des statistiques plus stables, donc une identification du locuteur plus précise ; mais plus elle est grande, plus le risque est élevé qu'elle contienne plusieurs locuteurs mélangés ;
   - on pourra comparer avec des résultats comme les x-vectors de Kaldi CALLHOME, qui utilisent le même genre de fenêtre. Attention : Kaldi utilise 1,5 s / 0,75 s. Le rapport de recouvrement (50 %) est le même, mais pas l'échelle, donc la comparaison reste approximative.
 - **Revoir si** : la proportion de fenêtres mélangées mesurée sur les RTTM, ou une ablation sur la taille de fenêtre, montre qu'une autre taille est meilleure.
+
+### D-56 — Embeddings : fenêtre 2,0 s, hop 1,0 s
+
+- **Date** : 11/11/2026 (enregistrée le 14/11/2026)
+- **Statut** : provisoire
+- **Contexte** : D-55 prévoyait de revoir la taille des windows par un balayage. C'est le paramètre qui a le plus d'impact sur le DER, via la confusion du clustering.
+- **Options** : 15 tailles de window de 0,5 s à 3,0 s, hop = moitié de la window (recouvrement de 50 %).
+- **Décision** : window 2,0 s, hop 1,0 s, longueur minimale 0,5 s (`win_s, hop_s, min_s` dans `baseline.py`).
+- **Justification** : balayage sur le dev sample 90 (`results/sweep_windows/sweep_windows_sample90_seed130_resume.csv`, VAD et clustering de l'époque) : DER moderne 43,90 % à 1,036 s, 33,38 % à 2,107 s ; au-delà de 2 s le DER ne baisse plus (entre 33,8 % et 34,9 % jusqu'à 3,0 s).
+- **Revoir si** : de meilleurs embeddings, une autre VAD ou un autre clustering déplacent l'optimum ; la parole sans window (segments de moins de 0,5 s) devient une source d'erreur importante.
+
+### D-57 — VAD de la baseline : `best_vad` (`vad_stack`), modèles dev-train pour toute évaluation sur le dev
+
+- **Date** : 12-13/11/2026 (enregistrée le 14/11/2026)
+- **Statut** : actif
+- **Contexte** : `best_vad` (D-62, amélioration n°1) remplace `energy_vad` (D-53, D-54) dans `baseline.py` et `baseline_oracle.py`. Elle existe en deux versions : modèles entraînés sur les 126 fichiers dev hors sample 90 (`train="devtrain"`) et sur les 216 fichiers dev (`train="alldev"`, « production »).
+- **Décision** : la baseline utilise `best_vad`. Toute mesure sur le dev sample 90 doit utiliser `train="devtrain"` ; `train="alldev"` n'est évaluable que sur le test (règle anti-fuite du `CLAUDE.md`, section 3).
+- **Point de vigilance** : au 14/11, `baseline.py` et `baseline_oracle.py` appellent encore `train="alldev"` : leurs chiffres sur le dev sample 90 sont optimistes (par exemple 26,43 % de DER moderne avec NME-SC contre 27,39 % avec `devtrain`).
+- **Revoir si** : la VAD apprise ne s'améliore pas sur le DER complet par rapport à `energy_vad` (voir D-62).
+
+### D-58 — Clustering spectral : graphe binarisé à p voisins, k par eigengap
+
+- **Date** : 05/11/2026 (paramètres révisés le 13/11/2026, enregistrée le 14/11/2026)
+- **Statut** : provisoire
+- **Contexte** : la décision ouverte « Segmentation et clustering » n'avait pas été enregistrée. Les diagnostics oracles (11/11) montrent que la confusion du clustering est la principale source d'erreur (environ 21-22 points de DER sur 33).
+- **Décision** : clustering spectral sur la similarité cosinus des embeddings centrés-réduits ; graphe binarisé où chaque window garde ses p plus proches voisins (`p = max(min_neighbors, round(p_neighbors × n))`) ; Laplacien normalisé ; k par eigengap entre `min_speakers` et `max_speakers` ; KMeans (seed 42). Paramètres au 13/11 : `p_neighbors = 0.02`, `min_neighbors = 5`, `max_speakers = 20` (avant : 0.1 / 5 / 10).
+- **Justification** : le diagnostic « k oracle pire que l'eigengap » (`results/diag_k_oracle_vs_eigengap/rapport.md`) montre qu'avec p = 10 % des windows, les locuteurs minoritaires n'ont pas de groupe propre dans le graphe ; un p plus petit les laisse apparaître (VAD oracle, eigengap : DER 28,67 % à p = 0.1, 25,41 % à p = 0.02).
+- **Point de vigilance** : `baseline_oracle.py` n'envoie pas ces paramètres et utilise encore 0.1 / 10 : ses runs ne sont pas comparables à ceux de `baseline.py`.
+- **Revoir si** : NME-SC (D-59) est adopté ; un balayage de `max_speakers` montre qu'il favorise les surestimations de k.
+
+### D-59 — NME-SC : nombre de voisins du graphe choisi fichier par fichier
+
+- **Date** : 13/11/2026 (enregistrée le 14/11/2026)
+- **Statut** : actif (variante B retenue pour l'ablation le 14/11/2026, D-62)
+- **Contexte** : le bon nombre de voisins p dépend du fichier (nombre de windows, nombre et poids des locuteurs). Avec `p_neighbors = 0.02`, p vaut en réalité le minimum de 5 voisins sur 57 fichiers sur 90, et l'eigengap surestime fortement k sur certains fichiers (k = 18 pour 2 locuteurs sur hiyis).
+- **Options** :
+  - A : p fixe (D-58) ;
+  - B : NME-SC (Park et al., 2019) avec le Laplacien normalisé : seul le choix de p change par rapport à A ;
+  - C : NME-SC avec le Laplacien non normalisé, comme dans l'article.
+- **Décision** : B intégré dans `baseline.py` (`clustering_method = "nme"`, `nme_laplacian = "normalized"`, grille de 30 valeurs de p entre 5 et 25 % des windows). A reste disponible (`clustering_method = "fixe"`) pour l'ablation.
+- **Justification** : dev sample 90, `best_vad(train="devtrain")`, mêmes embeddings (`results/nme_sc/agregats_sample90_seed130.csv`) :
+  - A : DER moderne 29,09 %, DER forgiving 26,21 %, JER 52,91 % ;
+  - B : 27,39 %, 24,48 %, 54,85 % ;
+  - C : 26,04 %, 23,11 %, 55,27 %.
+- **Points de vigilance** :
+  - le JER se dégrade (+1,9 à +2,4 points) : NME-SC surestime moins k (21 % → 10 % des fichiers) mais le sous-estime plus (34 % → 47 %) ;
+  - le gain repose sur quelques fichiers : autant de fichiers dégradés que d'améliorés de plus de 0,5 point (22 contre 20 pour B) ; stabilité non vérifiée (seeds de KMeans, autres fichiers dev).
+- **Revoir si** : le gain n'est pas stable ; le mentor préfère C ou privilégie le JER.
 
 ## 7. Organisation du travail
 
@@ -527,7 +576,7 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
 ### D-62 — Améliorations présentées au rendu
 
 - **Date** : 12/11/2026
-- **Statut** : actif (amélioration n°1) ; amélioration n°2 non décidée
+- **Statut** : actif (révisé le 14/11/2026 : les 2 améliorations de l'ablation sont fixées)
 - **Contexte** : le rendu exige au minimum 2 améliorations de la baseline, et une ablation sur 2 améliorations.
 - **Options** :
   - amélioration de la VAD par Claude Code (`vad_stack`, D-61) ;
@@ -537,23 +586,42 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
   - gain mesuré par l'agent sur la detection error (FA + Miss) : 6,649 % → 3,131 % sur le réglage (dev sample 90) ; 11,045 % → 5,761 % sur le test sample 90 (modèles dev-train) ;
   - le diagnostic VAD oracle (11/11) montrait une marge sur le DER moderne : 33,49 % → 28,67 % avec une VAD parfaite.
 - **Points de vigilance** :
-  - l'effet sur le DER du pipeline complet n'est pas encore mesuré : c'est lui qui compte pour l'ablation ;
+  - l'effet sur le DER du pipeline complet n'est pas encore mesuré : c'est lui qui compte pour l'ablation. Référence de la comparaison : `energy_vad` sans hystérésis (révision de D-54 du 14/11/2026) ;
   - l'agent a consulté le test 4 fois (selon son rapport, sans choix fait d'après le test) ;
   - la version « production » est entraînée sur tout le dev : seule la version dev-train est évaluable sur le dev ;
   - la VAD est un classifieur appris (HistGradientBoosting en 2 étages), et non plus une règle de traitement du signal.
 - **Revoir si** : le DER du pipeline complet avec `vad_stack` ne s'améliore pas par rapport à `energy_vad`.
 - **Source** : rapport du subagent, dans les documents du projet (`claude/vad_agent/rapport_vad_agent.md`).
+- **Révision du 14/11/2026 (décision de Grégoire) — définition de l'ablation** :
+  - **amélioration n°1 (VAD)** : `energy_vad` de base, **sans hystérésis ni lissage de l'énergie sur k trames** (`delta_db=0`, `smooth_frames=1`, seuil −30 dB, durées minimales D-54) → `best_vad` ;
+  - **amélioration n°2 (clustering)** : `p_neighbors` **fixe** → **choisi fichier par fichier** (NME-SC, D-59). Seul le choix de p change, donc Laplacien normalisé (variante B de D-59) ;
+  - choisie après le diagnostic du k oracle (`results/diag_k_oracle_vs_eigengap/`). Effet de l'amélioration n°2 sur le dev sample 90 (best_vad devtrain) : DER moderne 29,09 % → 27,39 %, JER 52,91 % → 54,85 % ;
+  - mesure finale sur le test sample 90 (versions fixées avant exécution), selon le protocole D-30 à D-37.
+- **Protocole de l'ablation (fixé le 14/11/2026, AVANT toute exécution sur le test ; décision de Grégoire)** :
+  - **fichiers** : test sample 90 uniquement (`samples/test/sample90_seed130.rttm`, audio `data/voxconverse/test/voxconverse_test_wav/`, D-12) ; **pas de passage préalable sur le dev**. Consultation du test à signaler dans le compte rendu ;
+  - **4 configurations**, chacune ne différant de sa voisine que par une amélioration :
+
+    | | p fixe 0.1 | p par fichier (NME-SC) |
+    |---|---|---|
+    | `energy_vad` de base | baseline de départ | + amélioration n°2 |
+    | `best_vad` | + amélioration n°1 | + les deux |
+
+  - **VAD avant amélioration** : `energy_vad`, seuil **−30 dB**, `delta_db = 0` (pas d'hystérésis), `smooth_frames = 1` (pas de lissage), `min_silence = 0,5 s`, `min_speech = 0,25 s` (valeurs de `baseline.py`) ;
+  - **VAD après amélioration** : `best_vad(train="alldev")` (modèles entraînés sur les 216 fichiers dev : autorisé sur le test, D-57) ;
+  - **clustering avant amélioration** : `spectral_clustering`, `p_neighbors = 0.1`, `min_neighbors = 5`, `min_speakers = 1`, `max_speakers = 20` ;
+  - **clustering après amélioration** : `nme_spectral_clustering`, Laplacien normalisé, grille de 30 valeurs de p entre `min_neighbors = 5` et 25 % des windows, `min_speakers = 1`, `max_speakers = 20` ;
+  - **identique dans les 4 configurations** : 16 kHz mono, frames 65 ms / hop 32,5 ms, 13 MFCC, windows 2,0 s / hop 1,0 s / min 0,5 s (statistiques moyenne + écart-type, mode `segment`), embeddings centrés-réduits, KMeans seed 42, post-traitement `windows_to_annotation` ;
+  - **métriques** (D-30 à D-37) : collar 0, UEM = [0, durée du wav], agrégation micro ; DER moderne, DER forgiving, JER, décomposition FA / missed / confusion, detection error de la VAD, RTF ; CSV par fichier et RTTM par configuration.
 
 ## Décisions ouvertes
 
 | Sujet | Options envisagées |
 | --- | --- |
-| Smoothing de la VAD | durées minimales retenues en premier (D-54) ; hystérésis à ajouter ensuite ; median filter non retenu pour l'instant |
-| Segmentation et clustering de la baseline | agglomératif / spectral / k-means ; nombre de locuteurs connu ou estimé |
+| Métrique de décision quand DER et JER divergent | DER moderne seul (D-32) / exiger aussi que le JER ne se dégrade pas |
+| Plafond de référence du clustering | k oracle (pire que l'eigengap) / meilleur k par fichier (22,77 % de DER, VAD oracle) |
 | Modèles de la semaine 2 | A : modèles pré-entraînés / B : fine-tuning |
 | Corpus de test secondaire | A : enregistrements maison seuls / B : + Simsamu (FR) / C : + SUMM-RE (FR) |
 | AMI en corpus secondaire | oui / non |
 | Organisation du code | module séparé réutilisable (ex. `viz.py`), probable |
 | Machine d'entraînement | PC fixe (RTX 3070, 8 Go) / Google Colab / autre |
 | Métriques de clustering | purity, coverage, speaker count error |
-| Seconde amélioration pour le rendu (D-62) | clustering / taille des windows d'embedding / détection de la musique |
