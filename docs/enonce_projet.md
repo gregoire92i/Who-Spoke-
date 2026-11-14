@@ -1,62 +1,58 @@
-# État du projet — Who Spoke?
- 
-> Dernière mise à jour : 12/11/2026. Mis à jour par Grégoire, ou par Claude Code uniquement après validation de
-> Grégoire (proposition dans le rapport de synchro). Les décisions détaillées sont dans `docs/choix_techniques.md`.
- 
-## Calendrier
- 
-- Début : 26/10/2026. Durée : 3 semaines.
-- Semaine 1 : corpus et baseline classique (terminée). Semaine 2 : pyannote (fait). **Semaine 3 (en cours)** :
-  améliorations mesurées, ablation, démo, documentation, soutenance.
-## Pipeline actuel
- 
-| Étape | Baseline (`baseline.py`) | Variante / alternative |
-|---|---|---|
-| VAD | `energy_vad` (`audio_features.py`) : seuil relatif au max, hystérésis, smoothing, durées minimales | `vad_stack` / `best_vad` (`vad.py`, subagent `vad-tester`, branche `vad-agent`) |
-| Caractéristiques | STFT + MFCC (`audio_features.py`) | — |
-| Embeddings | statistiques des MFCC par windows glissantes (`embeddings.py`) | — |
-| Clustering | spectral, nombre de locuteurs par eigengap (`clustering.py`) | mode k oracle |
-| Post-traitement | vote des windows → frames (`post_treatment.py`, `windows_to_annotation`) | mode vote oracle |
-| Pipeline pré-entraîné | — | `pyannote_diarization.py` (`pyannote/speaker-diarization-community-1`) |
- 
-Les valeurs des paramètres font foi dans `baseline.py`.
- 
-## Résultats de référence (observés)
- 
-Protocole : collar 0, UEM = durée du wav, agrégation micro (D-31 à D-34).
- 
-| Expérience | Fichiers | Résultat |
-|---|---|---|
-| Plancher « un seul locuteur » | dev sample 40 | DER moderne 53,66 % |
-| Plancher « un seul locuteur » | test sample 90 | DER moderne 56,7 % |
-| Baseline (sans oracle) | dev sample 90 | DER moderne 33,49 % |
-| Diagnostic VAD oracle | dev sample 90 | DER moderne 28,67 % (forgiving 25,99 %) |
-| Diagnostic vote oracle | dev sample 90 | DER moderne 31,63 % (gain uniquement en confusion) |
-| Diagnostic k oracle | dev sample 90 | DER moderne ≈ 38 % : **pire** que l'eigengap (hausse uniquement en confusion) |
-| `energy_vad` → `vad_stack` (dev-train) | dev sample 90 | detection error 6,649 % → 3,131 % |
-| `energy_vad` → `vad_stack` (dev-train) | test sample 90 | detection error 11,045 % → 5,761 % |
- 
-Fichiers sources : `results/` (CSV par fichier, RTTM) et `results/vad_agent/rapport.md`.
- 
-**Lecture actuelle (interprétation)** : la principale source d'erreur de la baseline est la **confusion du clustering**.
-La VAD a une marge de gain d'environ 5 points de DER (VAD oracle).
- 
-## Améliorations pour le rendu (D-62)
- 
-- **Amélioration n°1 : VAD apprise `vad_stack`.** Gain mesuré sur la detection error. **Non mesuré** : son effet sur
-  le DER du pipeline complet par rapport à `energy_vad`.
-- **Amélioration n°2 : non décidée.** Pistes : clustering, taille des windows d'embedding, détection de la musique.
-## Reste à faire pour le rendu
- 
-- [ ] DER, DER forgiving et JER du pipeline complet avec `vad_stack` vs `energy_vad` (mêmes fichiers).
-- [ ] Choisir, implémenter et mesurer l'amélioration n°2.
-- [ ] Ablation sur les 2 améliorations (mêmes fichiers de validation).
-- [ ] Tableau comparatif baseline / variantes / pyannote (DER, JER, RTF, cas d'échec).
-- [ ] Démo : charger un audio, timeline des locuteurs, écoute des segments, export RTTM ou JSON.
-- [ ] README de reproduction et fiche des corpus à jour.
-- [ ] Mettre à jour `docs/choix_techniques.md` dans le dépôt (D-61, D-62 manquent).
-- [ ] Soutenance.
-## Points de vigilance
- 
-- Le test a été consulté 4 fois par le subagent `vad-tester` (version fixée avant chaque exécution, selon son rapport).
-- Le RTF de pyannote sur ce PC n'est pas représentatif (GPU bloqué en mode idle).
+Who Spoke? Qui parle, et quand ?
+
+Diarisation de locuteurs
+
+Objectif
+
+Construire en trois semaines un système qui détecte les périodes de parole, distingue les locuteurs et attribue à chacun des segments temporels. Le système doit fonctionner sur des conversations jamais vues.
+
+Cadre
+Format : individuel, 3 semaines, en autonomie.
+Données fournies : aucune. Chaque participant recherche, sélectionne, télécharge ou constitue ses propres corpus.
+Contraintes : documenter provenance, licences, consentement si nécessaire, répartition entraînement/validation/test et risques de fuite de données.
+Outils : Python, GitHub et ressources de calcul accessibles au participant. Les modèles pré-entraînés sont autorisés, mais leurs usages doivent être documentés.
+Évaluation : démonstration sur des enregistrements inconnus, préparés séparément par l'organisation. Aucun jeu d'entraînement ni de validation n'est fourni au démarrage.
+Organisation indicative
+Semaine 1 : recherche de corpus et technologies ; constitution des données ; baseline classique.
+Semaine 2 : intégration de modèles de deep learning ; comparaison des approches.
+Semaine 3 : améliorations mesurées, robustesse, démonstration et documentation.
+Rendu
+Dépôt GitHub avec code, dépendances, instructions de reproduction et scripts d'évaluation.
+Fiche des corpus : source, accès, licence, volume, composition et limites.
+Tableau comparatif des approches et courte analyse d'ablation.
+Démonstration fonctionnelle sur un nouvel enregistrement.
+Les données ne sont redistribuées que si leur licence et les droits des personnes le permettent.
+Travail demandé
+1. Rechercher et préparer les données
+Identifier des corpus de conversations multi-locuteurs avec annotations temporelles, ou produire des enregistrements consentis et les annoter.
+Explorer notamment AMI et VoxConverse ; vérifier les conditions d'accès et d'usage.
+Construire un découpage de développement et de validation sans fuite entre enregistrements ou locuteurs pertinents.
+Exporter les annotations au format RTTM ou équivalent.
+2. Construire une baseline explicable
+Charger l'audio, calculer spectrogrammes et MFCC.
+Implémenter une détection de parole simple (énergie, seuils).
+Segmenter puis regrouper les voix avec des caractéristiques acoustiques et un clustering.
+Mesurer les erreurs sur les annotations collectées.
+3. Explorer les modèles modernes
+Comparer la baseline avec des embeddings de locuteurs et une méthode de clustering.
+Tester au moins une pipeline existante : pyannote.audio ou NVIDIA NeMo.
+Étudier au moins deux améliorations : VAD, seuils de clustering, nombre de locuteurs, bruit, segments courts ou chevauchements.
+Produire une ablation : effet mesuré de chaque modification sur les mêmes fichiers de validation.
+4. Démonstration
+
+Application permettant de charger un audio, lancer l'analyse, afficher une timeline des locuteurs, écouter les segments et exporter JSON ou RTTM.
+
+Évaluation technique
+DER (Diarization Error Rate), protocole documenté, notamment gestion des chevauchements et collar.
+JER en métrique complémentaire.
+Temps d'inférence et cas d'échec.
+Technologies et ressources à explorer
+librosa
+pyannote.audio
+SpeechBrain
+NVIDIA NeMo
+AMI
+VoxConverse
+Point de vigilance
+
+La constitution des données fait partie du travail : il n'y a ni corpus de départ, ni annotations, ni partition de validation fournis. Une première démo peut être construite sur un petit corpus légalement accessible ; la taille du corpus doit rester compatible avec trois semaines.

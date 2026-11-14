@@ -56,7 +56,7 @@ out_dir = Path("results")
 run_name = "baseline_sample90_seed130"
 
 
-def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size):# * force la defintion des parametres à gauche de * dans l'appel de la fonction
+def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size, vad_train="devtrain"):# vad_train : "devtrain" (mesures sur le dev) ou "alldev" (production, utilisé par la démo) ; * force la defintion des parametres à gauche de * dans l'appel de la fonction
     """Toute la chaîne sur UN fichier. Les tableaux lourds (audio, STFT, MFCC, matrice d'affinité)
     sont des variables locales : ils sont libérés dès que la fonction se termine pour eviter de staurer la ram"""
     #1 échantillonnage
@@ -64,7 +64,7 @@ def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size):# * fo
     #2 trames, fenêtre de Hann, STFT
     D = FFT(audio, frame_size=frame_size, hop_size=hop_size)
     #3 VAD
-    vad = best_vad(audio, uri=uri, train="traindev")# prends directement l'audio car a ses propres parametres de trames 
+    vad = best_vad(audio, uri=uri, train=vad_train)# prends directement l'audio car a ses propres parametres de trames 
     del audio#plus utilisé, on le libère tout de suite pour la ram bb
     #4 MFCC
     mfcc = compute_mfcc(D, sr=sr, n_mfcc=n_mfcc)
