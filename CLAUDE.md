@@ -92,7 +92,8 @@ au pipeline. Concrètement :
 - En fin de tâche, fournis : ce qui a été fait, les résultats (chiffres exacts), les fichiers **créés / modifiés**
   (pour le tableau de provenance de `docs/utilisation_claude.md`) et les commandes de reproduction.
 - **Ne modifie pas** `docs/choix_techniques.md` ni `docs/utilisation_claude.md` : si une décision te paraît nécessaire,
-  propose-la ; c'est Grégoire qui l'enregistre.
+  propose-la ; c'est Grégoire qui choisit.
+  (exception : enregistrer une décision que Grégoire a déjà prise, sur sa demande)
 - Décisions et contexte détaillés : voir l'index des documents (section 8).
 
 ## 8. Index des documents du projet

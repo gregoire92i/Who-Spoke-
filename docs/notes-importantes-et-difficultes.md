@@ -228,3 +228,34 @@ observations : le locuteur dominant est découpé : il occupe 2,96 clusters en m
 - Attention : le « p fixe 0.02 » vaut en réalité 5 voisins (min_neighbors) sur 57 fichiers / 90.
 - Interprétation : NME-SC supprime les surestimations catastrophiques du graphe trop creux, au prix de plus de sous-estimations -> meilleur DER (oublier un petit locuteur coûte peu de secondes), moins bon JER (chaque locuteur compte autant). Même compromis DER / JER que pour le k oracle.
 - À vérifier : stabilité du gain (seeds, all_dev), effet de max_speakers = 20 sur le p fixe, choix de la variante pour l'ablation (normalisé = un seul changement).
+
+## COÛT DE CALCUL DE LA BASELINE : RTF QUI AUGMENTE AVEC LA DURÉE (noté par Claude Code, 14/11)
+- Constat dans la démo : RTF baseline affiché ≈ 0,014, alors que les expériences donnaient 0,004-0,005 (`results/baseline_sample90_seed130_par_fichier.csv` : médiane 0,0049 ; 0,0043 pour les fichiers de 2-5 min, 0,0071 au-delà de 10 min).
+- Mesure (4 appels de suite de `baseline.diarize_file` dans un même processus, fichiers dev, RTX 3050 / 7 Go de RAM) :
+
+| Fichier | Appel | VAD | Temps | RTF |
+|---|---|---|---|---|
+| pqmho (139 s) | 1er | devtrain | 1,32 s | 0,0095 |
+| pqmho | 2e | alldev | 0,49 s | 0,0035 |
+| pqmho | 3e | devtrain | 0,53 s | 0,0038 |
+| pqmho | 4e | alldev | 0,51 s | 0,0037 |
+| ldnro (1097 s) | 1er | devtrain | 19,52 s | 0,0178 |
+| ldnro | 2e | alldev | 10,01 s | 0,0091 |
+| ldnro | 3e | devtrain | 10,44 s | 0,0095 |
+| ldnro | 4e | alldev | 9,29 s | 0,0085 |
+
+- Complexité de `nme_spectral_clustering` (`clustering.py`), n = nombre de windows (≈ 1 par seconde de parole, win 2 s / hop 1 s), d = dimension de l'embedding :
+
+| Étape | Ligne | Coût |
+|---|---|---|
+| Matrice d'affinité `A = X @ X.T` | 138 | O(n² · d), quadratique |
+| Tri des voisins `np.argsort(-A, axis=1)` | 139 | O(n² log n) |
+| Pour chaque p de la grille : graphe binaire + Laplacien | 141-155 | O(n²) |
+| Pour chaque p de la grille : valeurs propres `np.linalg.eigvalsh(L)` | 155 | O(n³), cubique |
+| p retenu : valeurs et vecteurs propres `np.linalg.eigh(L)` | 153, 174 | O(n³) |
+
+- Avec `nme_n_grid = 30` : ≈ 31 décompositions spectrales complètes (cubiques) par fichier.
+- Observé : le 1er appel d'un processus coûte 2 à 3 fois plus que les suivants ; à chaud, `alldev` et `devtrain` ont le même RTF ; durée × 7,9 (pqmho → ldnro) → temps à chaud × ≈ 18 (pas × 490 comme un coût purement cubique).
+- Interprétation : sur les fichiers courts, les étapes linéaires (chargement, STFT, MFCC, VAD, embeddings) dominent ; le terme cubique ne prend le dessus que sur les fichiers longs, d'où un RTF qui croît avec la durée. Le surcoût du 1er appel vient du chargement des bibliothèques / modèles au premier usage (la démo ne chauffe que `best_vad` au démarrage, pas toute la chaîne).
+- Non vérifié : temps par étape (pas de profilage) ; fichier exact sur lequel la démo affichait 0,014.
+- À surveiller : un enregistrement d'1 h (≈ 3 600 windows) donnerait des décompositions ≈ 30 fois plus lourdes que sur ldnro.

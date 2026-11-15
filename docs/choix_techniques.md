@@ -1,6 +1,6 @@
 # Choix techniques — Who Spoke ?
 
-> Journal des décisions techniques du projet, organisé par thème. Dernière mise à jour : 14/11/2026 (D-56 à D-59 et révision de D-62 ajoutées par Claude Code à la demande de Grégoire, **à valider avec le mentor**).
+> Journal des décisions techniques du projet, organisé par thème. Dernière mise à jour : 14/11/2026 (D-56 à D-59 et révision de D-62 ajoutées par Claude Code à la demande de Grégoire, **à valider avec le mentor** ; D-70 à D-76, démonstration, ajoutées par Claude Code à la demande de Grégoire).
 
 ## Mode d'emploi
 
@@ -612,6 +612,104 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
   - **clustering après amélioration** : `nme_spectral_clustering`, Laplacien normalisé, grille de 30 valeurs de p entre `min_neighbors = 5` et 25 % des windows, `min_speakers = 1`, `max_speakers = 20` ;
   - **identique dans les 4 configurations** : 16 kHz mono, frames 65 ms / hop 32,5 ms, 13 MFCC, windows 2,0 s / hop 1,0 s / min 0,5 s (statistiques moyenne + écart-type, mode `segment`), embeddings centrés-réduits, KMeans seed 42, post-traitement `windows_to_annotation` ;
   - **métriques** (D-30 à D-37) : collar 0, UEM = [0, durée du wav], agrégation micro ; DER moderne, DER forgiving, JER, décomposition FA / missed / confusion, detection error de la VAD, RTF ; CSV par fichier et RTTM par configuration.
+
+## 8. Démonstration
+
+Décisions prises par Grégoire le 14/11/2026 pour la démo (`demo/`, subagent `demo-builder`), enregistrées par Claude Code à sa demande. Détails : `results/demo_agent/rapport.md` et `results/demo_agent/architecture.md`.
+
+### D-70 — Démo : périmètre fonctionnel
+
+- **Date** : 14/11/2026
+- **Statut** : actif
+- **Contexte** : l'énoncé demande une application qui charge un audio, lance l'analyse, affiche une timeline des locuteurs, permet d'écouter les segments et d'exporter « JSON ou RTTM ». La démo est faite sur des enregistrements inconnus préparés par l'organisation.
+- **Options** :
+  - export : JSON, RTTM, ou les deux ;
+  - pipelines : baseline seule ; baseline + pyannote (sélecteur) ; variantes de la baseline (VAD `energy_vad` / `best_vad`, clustering `fixe` / `nme`) ;
+  - fonctions optionnelles : a. RTTM de référence (deux timelines, DER / JER) ; b. comparaison côte à côte de deux pipelines ; c. enregistrement au micro dans le navigateur ; d. renommage des locuteurs ; e. écoute enchaînée de tous les segments d'un locuteur ; f. marge réglable autour d'un segment à l'écoute.
+- **Décision** :
+  - export **RTTM uniquement** (pas de JSON) ;
+  - pipelines exposés : **baseline + pyannote**, avec un sélecteur, **sans variantes** de la baseline ;
+  - fonctions optionnelles a, b, c, d : **oui**, seulement après les fonctions obligatoires testées ; e et f : **non**.
+- **Justification** : *à compléter*. L'énoncé laisse le choix du format (« JSON ou RTTM ») ; le RTTM est le format de toutes les évaluations du projet (D-13).
+- **Revoir si** : l'organisation demande un export JSON, ou si une variante de la baseline devient la version présentée.
+
+### D-71 — Démo : interface Gradio locale, timeline plotly
+
+- **Date** : 14/11/2026
+- **Statut** : actif
+- **Contexte** : il faut une interface web simple à lancer en soutenance, qui fonctionne entièrement en local (D-05) et sans internet.
+- **Options** :
+  - framework : Gradio / Streamlit ;
+  - timeline : matplotlib (aucune dépendance en plus, zoom par curseurs) / plotly (zoom et survol natifs, une dépendance en plus) ;
+  - ressources externes de style (polices, icônes) : aucune / téléchargées.
+- **Décision** :
+  - **Gradio 6.32.0**, servi sur `127.0.0.1` uniquement, **jamais `share=True`**, statistiques d'usage de Gradio **désactivées** ;
+  - timeline en **plotly** (7.1.0) ;
+  - ressources externes : téléchargement autorisé **seulement** si elles sont stockées localement dans le dépôt, avec une licence qui permet la redistribution, et si la démo n'a **pas besoin d'internet** pour tourner. Au final, aucune n'est utilisée (polices système).
+- **Justification** : *à compléter par Grégoire*. Éléments de la proposition de phase 1 : compatibilité de Gradio 6.32.0 avec Python 3.14 vérifiée par `pip install --dry-run` ; composants prêts pour l'upload, l'audio et les tableaux cliquables ; `share=True` créerait un lien public, ce qui est exclu par D-05.
+- **Revoir si** : Gradio pose un problème de compatibilité ou de rendu le jour J.
+
+### D-72 — Démo : intégration de la baseline par `diarize_file(..., vad_train=...)`, VAD de production
+
+- **Date** : 14/11/2026
+- **Statut** : actif
+- **Contexte** : `baseline.diarize_file` traitait déjà un fichier, mais avec la VAD écrite en dur (`best_vad(..., train="devtrain")`, D-57). La démo travaille sur des enregistrements inconnus et doit utiliser les modèles de production, sans recopier la chaîne ni ses paramètres (les valeurs font foi dans `baseline.py`).
+- **Options** :
+  - B1 : la démo remplace `baseline.best_vad` à l'exécution par une fonction qui force `train="alldev"` ;
+  - B2 : la démo recopie l'enchaînement des 7 étapes de `diarize_file` en important les constantes de `baseline.py` ;
+  - B3 : un argument `vad_train` est ajouté à `baseline.diarize_file`.
+- **Décision** :
+  - **B3** : `diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size, vad_train="devtrain")` (modification faite par Claude Code à la demande de Grégoire, 14/11). La démo appelle `vad_train="alldev"`, avec `frame_size=baseline.frame_size` et `hop_size=baseline.hop_size` ;
+  - VAD de la démo : `best_vad` avec `train="alldev"` (modèles de production, entraînés sur les 216 fichiers dev), cohérent pour des enregistrements inconnus. Les **mesures** sur le dev restent en `devtrain` (D-57).
+- **Justification** : B3 ne recopie aucun code et ne remplace aucune fonction à l'exécution (B1 est peu lisible et fragile, B2 peut diverger de `baseline.py`). Un test vérifie que la démo avec `vad_train="devtrain"` donne exactement la sortie de `baseline.diarize_file` sur 2 fichiers dev.
+- **Revoir si** : la VAD de production change de nom de modèles, ou si `diarize_file` change de signature.
+
+### D-73 — Démo : pyannote hors ligne, sans jeton
+
+- **Date** : 14/11/2026
+- **Statut** : actif
+- **Contexte** : pyannote (`pyannote/speaker-diarization-community-1`) est chargé depuis Hugging Face. La démo doit fonctionner sans réseau et sans exposer de jeton.
+- **Options** :
+  - 1 : jeton lu dans une variable d'environnement ou via `hf auth login` (comme `pyannote_diarization.py`) ;
+  - 2 : chargement hors ligne depuis le cache local (`HF_HUB_OFFLINE=1`), sans jeton.
+- **Décision** : **option 2**, `HF_HUB_OFFLINE=1` fixé avant tout import ; l'option 1 est le repli si le mode hors ligne ne fonctionne pas. GPU si disponible, sinon CPU, l'appareil utilisé est affiché.
+- **Justification** : vérifié le 14/11 : chargement réussi sans jeton visible (`HF_TOKEN_PATH` vers un fichier inexistant), en 8,7 s. Le modèle doit avoir été téléchargé une fois dans `~/.cache/huggingface/hub`.
+- **Revoir si** : la démo tourne sur une machine sans le cache du modèle.
+
+### D-74 — Démo : formats audio, conversion par ffmpeg
+
+- **Date** : 14/11/2026
+- **Statut** : actif
+- **Contexte** : les enregistrements inconnus peuvent être en `.m4a`, `.mp3`… `librosa.load` et `soundfile` ne lisent pas le `.m4a` dans l'environnement du projet (`LibsndfileError`, audioread absent).
+- **Options** : refuser les formats non lus / convertir avec ffmpeg (déjà prévu pour les enregistrements maison, D-50).
+- **Décision** :
+  - **décision de Grégoire** : tout format non lu par librosa / soundfile est converti en wav 16 kHz mono par ffmpeg avant le traitement (dans `demo/tmp/`) ;
+  - **correction apportée ensuite par Claude Code** (signalée dans le rapport) : seuls wav et flac sont passés tels quels aux pipelines ; **tout autre format** (mp3, ogg, m4a…) est converti, même s'il est lisible par soundfile. Raison : pyannote échouait sur la lecture directe d'un mp3 à 48 kHz (« requested chunk … resulted in 478895 samples instead of the expected 480000 samples »).
+- **Justification** : D-50 ; même entrée pour les deux pipelines ; un wav ou un flac est traité par la baseline exactement comme par `baseline.py`.
+- **Revoir si** : un format courant échoue malgré la conversion.
+
+### D-75 — Démo : modèles `best_vad` absents, pas d'erreur bloquante
+
+- **Date** : 14/11/2026
+- **Statut** : actif
+- **Contexte** : si ses modèles manquent, `best_vad` se réentraîne automatiquement, ce qui exige le cache de caractéristiques du dev (`results/vad_agent/cache/dev/`, non versionné), `samples/dev/all_dev.rttm` et les annotations dev. Les modèles `.pkl` sont versionnés, le cas est donc peu probable.
+- **Options** : erreur explicite qui bloque la baseline / information de l'utilisateur et réentraînement si possible.
+- **Décision** : **pas d'erreur bloquante**. Au démarrage, l'utilisateur est informé qu'un réentraînement est en cours (environ 3 à 5 min) si les prérequis sont présents ; sinon la baseline est désactivée avec la commande pour régénérer le cache, et pyannote reste disponible.
+- **Justification** : *à compléter*.
+- **Revoir si** : le réentraînement prend trop de temps pour une démo, ou si les modèles cessent d'être versionnés.
+
+### D-76 — Démo : branche dédiée et fichiers ignorés
+
+- **Date** : 14/11/2026
+- **Statut** : actif
+- **Contexte** : la démo est déléguée à un subagent (D-61) et son code sera poussé sur GitHub, alors que l'audio ne doit jamais quitter la machine (D-05).
+- **Options** : branche dédiée dans un git worktree / branche dédiée dans le dépôt principal.
+- **Décision** :
+  - branche **`demo`** dans le **dépôt principal**, sans worktree ; aucun commit par l'agent ;
+  - `.gitignore` étendu : `demo/tmp/` (uploads, wav convertis, exports RTTM), `.gradio/`, et les extensions audio compressées `*.m4a`, `*.ogg`, `*.opus`, `*.aac`, `*.wma`, `*.webm` (en plus de `*.wav`, `*.mp3`, `*.flac` et `data/`).
+- **Justification** : D-05 ; les fichiers déposés dans la démo pendant la soutenance ne doivent jamais être versionnés.
+- **Revoir si** : la démo écrit des fichiers ailleurs que dans `demo/tmp/`.
+
 
 ## Décisions ouvertes
 

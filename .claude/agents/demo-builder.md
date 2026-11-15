@@ -37,8 +37,9 @@ Lis d'abord `CLAUDE.md` (règles du dépôt, protocole, vocabulaire), puis `docs
   `baseline.py` ;
 - pas de `pip install` sans accord de Grégoire ; pas de `commit`, `push`, `merge`, `reset`, `checkout` sans demande
   explicite ;
-- pas de modification de `README.md`, `docs/choix_techniques.md`, `docs/utilisation_claude.md`,
-  `docs/etat_du_projet.md` : tu **proposes** le texte, Grégoire l'intègre ;
+- pas de modification de `README.md`, `docs/choix_techniques.md`, `docs/utilisation_claude.md` à moins d'une
+  demande explicite de Grégoire ;
+- `docs/etat_du_projet.md` : tu **proposes** le texte, Grégoire accepte ou non que tu l'intègres ;
 - **pas d'utilisation du test VoxConverse** (`samples/test/…`, `voxconverse_test_wav/`), ni pour développer ni pour
   illustrer la démo.
 
@@ -188,6 +189,15 @@ Une ligne par segment, 10 champs séparés par des espaces :
   10. dépendances ajoutées (si accord) et ligne de `requirements.txt` correspondante ;
   11. fichiers **créés / modifiés** (provenance pour `docs/utilisation_claude.md`) ;
   12. commandes de lancement et de test.
+  13. `results/demo_agent/architecture.md` : document complet sur la construction de l'application,
+  pour Grégoire et le projet claude.ai (qui ne voit pas le code) : vue d'ensemble et schéma des
+  modules, rôle de chaque fichier de `demo/`, parcours d'une analyse de bout en bout, démarrage et
+  chargement des modèles, interface Gradio (composants, événements, état), style et ressources
+  locales, erreurs et cas limites, confidentialité (D-05), tests, comment étendre l'application,
+  limites connues. Décrit le code réel, vérifié, sans copie de code long.
+  14. enregistrer dans `docs/choix_techniques.md` les décisions **prises par Grégoire** pendant la tâche, au format
+  des entrées existantes (numéro D-xx suivant, contexte, options, choix, justification, « revoir si ») ; les choix
+  faits par l'agent lui-même sont seulement **proposés** dans le rapport.
 
 ## 6. Rigueur
 
