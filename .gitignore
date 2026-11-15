@@ -29,3 +29,14 @@ results/**/*.log
 
 #réglages locaux de Claude Code (propres à la machine)
 .claude/settings.local.json
+
+#démo : audio converti, uploads Gradio, exports RTTM (D-05)
+demo/tmp/
+.gradio/
+#audio compressé non couvert par *.wav/*.mp3/*.flac (D-05)
+*.m4a
+*.ogg
+*.opus
+*.aac
+*.wma
+*.webm

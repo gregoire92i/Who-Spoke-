@@ -1,0 +1,9 @@
+file,tag,n,diar_med,diar_min,diar_max,RTF_med
+afjiv_13s.m4a,omp_1,9,0.0529,0.0518,0.0546,0.0041
+afjiv_13s.m4a,omp_4,9,0.0517,0.0460,0.0603,0.0040
+afjiv_13s.m4a,omp_default,9,0.1452,0.1329,0.1615,0.0111
+ldnro.wav,omp_4,3,6.3166,6.2793,6.8049,0.0058
+ldnro.wav,omp_default,3,12.3127,9.2423,16.8185,0.0112
+qzwxa.wav,omp_1,9,0.8637,0.8324,0.9399,0.0039
+qzwxa.wav,omp_4,9,0.7852,0.7611,0.8623,0.0035
+qzwxa.wav,omp_default,9,0.9546,0.8162,1.1070,0.0043

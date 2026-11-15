@@ -1,0 +1,5 @@
+pipeline,points,cout_fixe_s,cout_par_s_audio,n
+baseline,extraits ipqqq (5-300 s),0.09899,0.00386,40
+baseline,tout (ldnro compris),-0.14422,0.00783,45
+pyannote,extraits ipqqq (5-300 s),-2.11877,0.27069,40
+pyannote,tout (ldnro compris),-2.15461,0.27127,42

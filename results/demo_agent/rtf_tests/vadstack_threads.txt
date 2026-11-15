@@ -1,0 +1,7 @@
+# Sortie exacte de scripts/vadstack_threads.py (30 appels après 1 appel ignoré, même processus, modèles alldev)
+OMP_NUM_THREADS=(défaut) afjiv_13s.wav features med 0.0581 min 0.0359 max 0.0948 | vad_stack med 0.0693 min 0.0235 max 0.0936
+OMP_NUM_THREADS=(défaut) qzwxa.wav features med 0.4922 min 0.4791 max 0.5530 | vad_stack med 0.0899 min 0.0778 max 0.1001
+OMP_NUM_THREADS=1 afjiv_13s.wav features med 0.0272 min 0.0265 max 0.0317 | vad_stack med 0.0164 min 0.0159 max 0.0192
+OMP_NUM_THREADS=1 qzwxa.wav features med 0.4784 min 0.4654 max 0.5762 | vad_stack med 0.1781 min 0.1680 max 0.1938
+# threadpoolctl : openblas 12 threads (x2), openmp 12 threads ; scikit-learn 1.9.1
+# Sorties RTTM de la démo identiques (cmp) avec OMP_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 et par défaut : afjiv_13s (m4a), qzwxa, ldnro

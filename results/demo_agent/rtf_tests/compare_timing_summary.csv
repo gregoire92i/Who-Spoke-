@@ -1,0 +1,9 @@
+file,variant,n,med_s,min_s,max_s,RTF_med
+afjiv_13s.wav,A_baselinepy_devtrain,8,0.14048,0.07940,0.14770,0.01081
+afjiv_13s.wav,B_diarize_file_alldev,8,0.14740,0.07594,0.17677,0.01134
+afjiv_13s.wav,C_core_diarize,8,0.15108,0.14148,0.16650,0.01162
+afjiv_13s.wav,P_params,8,0.00001,0.00001,0.00001,0.00000
+qzwxa.wav,A_baselinepy_devtrain,8,0.89494,0.83481,1.06531,0.00400
+qzwxa.wav,B_diarize_file_alldev,8,0.87094,0.85529,1.16340,0.00389
+qzwxa.wav,C_core_diarize,8,0.93209,0.79774,1.04146,0.00416
+qzwxa.wav,P_params,8,0.00001,0.00001,0.00001,0.00000

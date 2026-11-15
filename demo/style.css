@@ -1,0 +1,78 @@
+/* Style de la démo Who Spoke?. Aucune ressource externe (pas de police web, pas de CDN) : polices système.
+   Les couleurs passent par les variables CSS de Gradio pour suivre les modes clair et sombre. */
+
+.gradio-container { max-width: 1400px !important; margin: 0 auto !important; }
+
+/* ---------- en-tête ---------- */
+.ws-header {
+  border-radius: 16px;
+  padding: 22px 28px;
+  background: linear-gradient(120deg, #0b3b60 0%, #0072B2 55%, #2a8fc7 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(0, 60, 110, 0.25);
+}
+.ws-header h1 { margin: 0; font-size: 1.9rem; font-weight: 700; letter-spacing: 0.2px; color: #ffffff; }
+.ws-header .ws-sub { margin-top: 4px; font-size: 1.05rem; opacity: 0.92; color: #ffffff; }
+.ws-header .ws-desc { margin-top: 10px; font-size: 0.92rem; opacity: 0.85; color: #ffffff; }
+.ws-badges { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+.ws-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: 999px; font-size: 0.82rem;
+  background: rgba(255, 255, 255, 0.16); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.35);
+}
+.ws-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.ws-dot.ok { background: #5fd38d; }
+.ws-dot.ko { background: #ff8a65; }
+
+/* ---------- titres de section ---------- */
+.ws-section { margin: 6px 0 2px 2px; font-size: 1.05rem; font-weight: 650; color: var(--body-text-color); }
+.ws-section .ws-step {
+  display: inline-block; min-width: 22px; height: 22px; line-height: 22px; text-align: center;
+  border-radius: 50%; margin-right: 8px; font-size: 0.8rem; font-weight: 700;
+  background: var(--color-accent); color: #ffffff;
+}
+.ws-hint { font-size: 0.85rem; color: var(--body-text-color-subdued); }
+
+/* ---------- cartes de chiffres clés ---------- */
+.ws-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.ws-card {
+  border-radius: 12px; padding: 12px 14px;
+  background: var(--block-background-fill);
+  border: 1px solid var(--block-border-color);
+  border-top: 4px solid var(--color-accent);
+}
+.ws-card .ws-k { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--body-text-color-subdued); }
+.ws-card .ws-v { font-size: 1.45rem; font-weight: 700; color: var(--body-text-color); margin-top: 2px; }
+.ws-card .ws-s { font-size: 0.78rem; color: var(--body-text-color-subdued); }
+.ws-title { font-size: 0.95rem; margin: 2px 0 10px 0; color: var(--body-text-color); }
+.ws-title b { color: var(--color-accent); }
+.ws-empty {
+  border: 2px dashed var(--block-border-color); border-radius: 12px; padding: 26px; text-align: center;
+  color: var(--body-text-color-subdued);
+}
+.ws-warn {
+  margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+  background: rgba(230, 159, 0, 0.14); border: 1px solid rgba(230, 159, 0, 0.55); color: var(--body-text-color);
+}
+.ws-params { margin-top: 10px; font-size: 0.85rem; color: var(--body-text-color-subdued); }
+.ws-params code { font-size: 0.8rem; }
+
+/* ---------- pastilles de locuteurs ---------- */
+.ws-legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.ws-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px;
+  font-size: 0.82rem; border: 1px solid var(--block-border-color); background: var(--block-background-fill);
+  color: var(--body-text-color);
+}
+.ws-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+/* ---------- tableau des métriques (référence) ---------- */
+.ws-metrics table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.ws-metrics th, .ws-metrics td { padding: 6px 8px; border-bottom: 1px solid var(--block-border-color); text-align: right; }
+.ws-metrics th:first-child, .ws-metrics td:first-child { text-align: left; }
+.ws-metrics .ws-note { font-size: 0.82rem; color: var(--body-text-color-subdued); margin-bottom: 6px; }
+
+/* ---------- bouton principal ---------- */
+#ws-run { font-size: 1.05rem; min-height: 48px; }
+
+footer { opacity: 0.6; }

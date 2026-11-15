@@ -1,0 +1,17 @@
+content,pipeline,format,n,load_med,diar_med,total_med,RTF_aff_med,RTF_tot_med,dur
+afjiv_13s,baseline,wav,2,0.0026,0.1631,0.1658,0.0125,0.0128,13.0
+afjiv_13s,baseline,flac,3,0.0072,0.1509,0.1566,0.0116,0.012,13.0
+afjiv_13s,baseline,mp3,3,0.104,0.1462,0.224,0.0112,0.0172,13.0
+afjiv_13s,baseline,m4a,3,0.0917,0.1427,0.2262,0.0109,0.0173,13.056
+afjiv_13s,pyannote,wav,2,0.0021,1.1566,1.1587,0.089,0.0891,13.0
+afjiv_13s,pyannote,flac,3,0.0054,1.1435,1.1487,0.088,0.0884,13.0
+afjiv_13s,pyannote,mp3,3,0.0712,1.155,1.2291,0.0888,0.0945,13.0
+afjiv_13s,pyannote,m4a,3,0.0646,1.4978,1.5623,0.1147,0.1197,13.056
+afjiv_full,baseline,wav,2,0.0238,0.5925,0.6166,0.0039,0.0041,151.248
+afjiv_full,baseline,flac,3,0.0696,0.6799,0.7508,0.0045,0.005,151.248
+afjiv_full,baseline,mp3,3,0.2517,0.7591,1.011,0.005,0.0067,151.248
+afjiv_full,baseline,m4a,3,0.1954,0.6801,0.8808,0.0045,0.0058,151.296
+afjiv_full,pyannote,wav,1,0.0266,38.3153,38.342,0.2533,0.2535,151.248
+afjiv_full,pyannote,flac,2,0.0723,38.1167,38.1891,0.252,0.2525,151.248
+afjiv_full,pyannote,mp3,2,0.2461,38.2805,38.5267,0.2531,0.2547,151.248
+afjiv_full,pyannote,m4a,2,0.1895,38.2848,38.4745,0.253,0.2543,151.296
