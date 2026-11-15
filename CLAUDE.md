@@ -17,7 +17,7 @@ au pipeline. Concrètement :
 - **Reste dans le périmètre demandé.** Ne refactorise pas, ne renomme pas, ne « nettoie » pas le code de Grégoire sans
   qu'il le demande. Préfère les corrections ciblées.
 - **Si une consigne est ambiguë**, pose une question courte avant d'agir.
-- Grégoire code lui-même sur `main`. Les tâches déléguées se font sur une **branche dédiée** (souvent dans un git worktree).
+Tout le travail se fait sur `main`, y compris les tâches déléguées : pas de branche dédiée.
   Ne fais jamais `commit`, `push`, `merge`, `reset` ou `checkout` sans demande explicite.
 
 ## 2. Règles de rigueur (non négociables)
