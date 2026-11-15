@@ -93,3 +93,59 @@ def compute_embeddings(mfcc, vad, win_s=windows_size, hop_s=0.5, min_s=0.5, stat
     #si aucune fenêtre (fichier sans parole, cas pqmho), on renvoie quand même une matrice vide de la bonne largeur
     X = np.array(X) if X else np.empty((0, dim))
     return X, win_segs
+
+#### EMBEDDINGS PRÉ-ENTRAÎNÉS (WeSpeaker) ####
+#option de la baseline (baseline.py : pretrained_embeddings = True) : SEUL le vecteur de chaque window change,
+#les bornes des windows (win_segs de compute_embeddings) restent les mêmes
+WESPEAKER_ID = "pyannote/wespeaker-voxceleb-resnet34-LM"#ResNet34 entraîné sur VoxCeleb (risque de fuite : voir D-40)
+_pretrained_cache = {}#modèle chargé UNE seule fois par processus : {(model_id, device): model}
+
+
+def load_pretrained_model(model_id=WESPEAKER_ID, device=None):
+    """Charge (1re fois : télécharge) le modèle pyannote et le garde en mémoire.
+    token=False : aucun jeton n'est envoyé (le modèle n'est pas soumis à conditions) ; s'il en demandait un,
+    from_pretrained échouerait au lieu d'utiliser un jeton en silence.
+    device None : GPU si disponible, sinon CPU."""
+    import torch
+    from pyannote.audio import Model
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    key = (model_id, str(device))
+    if key not in _pretrained_cache:
+        model = Model.from_pretrained(model_id, token=False)
+        if model is None:#pyannote renvoie None si l'accès est refusé
+            raise RuntimeError(f"Impossible de charger {model_id} (jeton requis ?)")
+        model.eval()#pas de dropout / batchnorm en mode inférence
+        _pretrained_cache[key] = model.to(torch.device(device))
+    return _pretrained_cache[key]
+
+
+def compute_pretrained_embeddings(audio, win_segs, sr=sr, model_id=WESPEAKER_ID, device=None, batch_size=32):
+    """Un embedding WeSpeaker par window, sur les MÊMES bornes que compute_embeddings.
+    audio : signal 16 kHz mono (load_audio) ; win_segs : liste des Segment (s) renvoyée par compute_embeddings.
+    Chaque window est découpée dans l'audio [start, end[ (arrondi à l'échantillon), puis passée au modèle.
+    Les windows de même longueur sont regroupées en lots (même résultat qu'une par une, en plus rapide).
+    Renvoie X (n_windows, 256), dans l'ordre de win_segs."""
+    import torch
+    model = load_pretrained_model(model_id, device)
+    dim = model.dimension
+    if len(win_segs) == 0:#fichier sans parole (cas pqmho) : même convention que compute_embeddings
+        return np.empty((0, dim))
+    #bornes en échantillons de chaque window
+    bounds = [(int(round(seg.start * sr)), min(int(round(seg.end * sr)), len(audio))) for seg in win_segs]
+    X = np.empty((len(win_segs), dim), dtype=np.float32)
+    #regroupement par longueur : un lot = des windows de même nombre d'échantillons
+    by_len = {}
+    for i, (a, b) in enumerate(bounds):
+        by_len.setdefault(b - a, []).append(i)
+    dev = next(model.parameters()).device
+    with torch.inference_mode():
+        for n, idx in by_len.items():
+            for k in range(0, len(idx), batch_size):
+                batch = idx[k:k + batch_size]
+                wav = np.stack([audio[bounds[i][0]:bounds[i][1]] for i in batch])#(lot, n)
+                wav = torch.from_numpy(wav.astype(np.float32)).unsqueeze(1).to(dev)#(lot, 1 canal, n)
+                X[batch] = model(wav).cpu().numpy()
+    if not np.isfinite(X).all():#garde-fou : un NaN fausserait le cosinus sans erreur visible
+        raise ValueError(f"embeddings non finis pour {np.flatnonzero(~np.isfinite(X).all(axis=1)).size} windows")
+    return X.astype(np.float64)

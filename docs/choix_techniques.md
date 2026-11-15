@@ -1,6 +1,6 @@
 # Choix techniques — Who Spoke ?
 
-> Journal des décisions techniques du projet, organisé par thème. Dernière mise à jour : 14/11/2026 (D-56 à D-59 et révision de D-62 ajoutées par Claude Code à la demande de Grégoire, **à valider avec le mentor** ; D-70 à D-76, démonstration, ajoutées par Claude Code à la demande de Grégoire).
+> Journal des décisions techniques du projet, organisé par thème. Dernière mise à jour : 14/11/2026 (D-56 à D-59 et révision de D-62 ajoutées par Claude Code à la demande de Grégoire, **à valider avec le mentor** ; D-70 à D-76, démonstration, ajoutées par Claude Code à la demande de Grégoire ; 15/11/2026 : D-77, 4 threads dans la démo, ajoutée par Claude Code à la demande de Grégoire).
 
 ## Mode d'emploi
 
@@ -709,6 +709,20 @@ Décisions prises par Grégoire le 14/11/2026 pour la démo (`demo/`, subagent `
   - `.gitignore` étendu : `demo/tmp/` (uploads, wav convertis, exports RTTM), `.gradio/`, et les extensions audio compressées `*.m4a`, `*.ogg`, `*.opus`, `*.aac`, `*.wma`, `*.webm` (en plus de `*.wav`, `*.mp3`, `*.flac` et `data/`).
 - **Justification** : D-05 ; les fichiers déposés dans la démo pendant la soutenance ne doivent jamais être versionnés.
 - **Revoir si** : la démo écrit des fichiers ailleurs que dans `demo/tmp/`.
+
+### D-77 — Démo : calcul limité à 4 threads
+
+- **Date** : 15/11/2026 (décision de Grégoire, enregistrée par Claude Code à sa demande)
+- **Statut** : actif ; **mise en œuvre pas encore faite** dans le code de la démo
+- **Contexte** : le RTF affiché par la démo (environ 0,011 sur un extrait de 13 s) est plus élevé que celui des expériences (médiane 0,0049). Les tests du subagent `demo-builder` (`results/demo_agent/rapport.md`, section 14 ; CSV dans `results/demo_agent/rtf_tests/`) montrent que l'écart vient surtout du nombre de threads : par défaut, les bibliothèques de calcul (OpenBLAS, OpenMP) utilisent les 12 threads du processeur.
+- **Mesures** (baseline, afjiv, 13 s) : 12 threads → 0,1452 s (RTF 0,0111) ; **4 threads → 0,0517 s (RTF 0,0040)** ; 1 thread → 0,0529 s (RTF 0,0041).
+- **Options** : garder 12 threads (défaut) / 4 threads / 1 thread.
+- **Décision** : la démo passe à **4 threads**. `baseline.py` et les scripts d'expérience ne changent pas (D-36 inchangée).
+- **Justification** :
+  - sur un fichier court, les opérations portent sur de petites matrices : le coût de coordination des 12 threads (découpage du travail, synchronisation, threads en attente active qui occupent les cœurs) dépasse le gain du calcul en parallèle. Ce mécanisme est une explication classique, non mesurée en détail ;
+  - 4 threads sont aussi rapides qu'1 thread sur un fichier court, tout en gardant du parallélisme pour les fichiers longs, où les calculs sont plus lourds (clustering NME, voir `docs/notes-importantes-et-difficultes.md`) ;
+  - le RTF affiché dans la démo redevient comparable à celui des expériences.
+- **Revoir si** : l'effet sur pyannote en CPU (non mesuré) est défavorable, ou si un fichier long est nettement plus lent avec 4 threads qu'avec 12.
 
 
 ## Décisions ouvertes

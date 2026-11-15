@@ -11,27 +11,42 @@ Who-Spoke-/
 ├── README.md
 ├── requirements.txt
 ├── .gitignore
+├── CLAUDE.md                     # règles de travail de Claude Code dans le dépôt
 ├── baseline.py                   # point d'entrée : baseline complète sur un sample + évaluation
-├── audio_features.py             # chargement audio, STFT, VAD par énergie, MFCC
-├── embeddings.py                 # embeddings par fenêtre glissante (statistiques des MFCC)
-├── clustering.py                 # clustering spectral, nombre de locuteurs par eigengap
-├── post_treatment.py             # fenêtres -> trames -> Annotation pyannote
-├── vad.py                        # évaluation de la VAD seule
+├── baseline_oracle.py            # diagnostics oracle (VAD, nombre de locuteurs, vote)
+├── ablation.py                   # ablation des 2 améliorations (test sample 90, version figée)
+├── nme_sc_experiment.py          # expérience NME-SC (choix de p par fichier) sur le dev
 ├── pyannote_diarization.py       # diarisation avec la pipeline pré-entraînée pyannote
-├── rttm_files.py                 # statistiques par fichier, tirage du sous-ensemble de dev
+├── audio_features.py             # chargement audio, STFT, VAD par énergie, MFCC
+├── vad.py                        # VAD apprise (vad_stack / best_vad) et évaluation de la VAD seule
+├── embeddings.py                 # embeddings par fenêtre glissante (statistiques des MFCC)
+├── clustering.py                 # clustering spectral (p fixe ou NME-SC), nombre de locuteurs par eigengap
+├── post_treatment.py             # fenêtres -> trames -> Annotation pyannote
+├── baseline_embeddings_tests.py  # balayage de la taille des windows d'embedding
+├── setting_frames_nd_hop.py      # balayage frame / hop de la STFT
+├── rttm_files.py                 # statistiques par fichier, tirage des samples
 ├── plot_reference.py             # timeline de référence d'un fichier RTTM
-├── Data_vizualizer.py            # statistiques du corpus, comparaison sous-ensemble / dev complet
+├── Data_vizualizer.py            # statistiques du corpus, comparaison sample / dev complet
 ├── metrics_and_sanity_checks.py  # sanity checks de la chaîne d'évaluation
-├── samples/                      # listes des fichiers tirés du dev (RTTM)
-├── results/                      # sorties de baseline.py (RTTM des hypothèses, CSV)
+├── demo/                         # démo Gradio (voir « Démo »)
+├── tests/test_demo.py            # tests de la démo (pytest)
+├── analysis/clustering_agent/    # scripts du diagnostic « k oracle vs eigengap »
+├── samples/
+│   ├── dev/                      # sample90_seed130, sample40_seed130, all_dev (RTTM)
+│   └── test/                     # sample90_seed130, sample40_seed130 (RTTM)
+├── results/                      # sorties des scripts (RTTM des hypothèses, CSV par fichier, rapports)
 ├── figures/                      # figures générées par les scripts
 ├── data/                         # non versionné
 └── docs/
     ├── corpus/
     │   ├── voxconverse.md
     │   └── ami.md
+    ├── sync/                     # rapports de synchronisation
+    ├── enonce_projet.md
+    ├── etat_du_projet.md
     ├── decision_corpus.md
     ├── choix_techniques.md
+    ├── rapport-ablation.md
     ├── utilisation_claude.md
     └── notes-importantes-et-difficultes.md
 ```
@@ -41,7 +56,7 @@ Who-Spoke-/
 - Linux (développé sous Ubuntu via WSL2)
 - Python 3.14.4
 - Paquets système : `python3-venv`, `ffmpeg`, `libsndfile1`, `unzip`
-- Testé avec un GPU NVIDIA (pilote compatible CUDA 13.2, `torch 2.15.0+cu132`)
+- Testé avec un GPU NVIDIA (pilote compatible CUDA 13.2, `torch 2.15.0+cu132`). La baseline et la démo tournent aussi sur CPU.
 
 ## Installation
 
@@ -106,15 +121,17 @@ data/voxconverse/
 
 Tous les scripts utilisent des chemins relatifs : ils doivent être lancés **depuis la racine du dépôt**, avec le `.venv` activé.
 
-1. Sample de dev : `baseline.py` lit la liste des fichiers à traiter dans `samples/sample90_seed130.rttm` (90 fichiers du dev, tirage stratifié, seed 130). Il es possible de regenerer un sample avec le code en commentaire à la fin de rttm_files. Le sample sera le meme si la seed n'est pas touchée.
+1. Sample de dev : `baseline.py` lit la liste des fichiers à traiter dans `samples/dev/sample90_seed130.rttm` (90 fichiers du dev, tirage stratifié, seed 130). Il est possible de régénérer un sample avec le code en commentaire à la fin de `rttm_files.py`. Le sample sera le même si la seed n'est pas modifiée.
 
-2. Lancer la baseline (VAD énergie → MFCC → embeddings → clustering spectral → post-traitement → évaluation) :
+2. Lancer la baseline (VAD apprise `best_vad` → MFCC → embeddings → clustering spectral NME-SC → post-traitement → évaluation) :
 
 ```bash
 python baseline.py
 ```
 
-Les paramètres (VAD, MFCC, fenêtres, clustering, sample utilisé) sont regroupés en haut de `baseline.py`. Les fichiers sont traités un par un pour limiter la RAM.
+Les paramètres (VAD, MFCC, fenêtres, clustering, sample utilisé) sont regroupés en haut de `baseline.py`, où leurs valeurs font foi. Les fichiers sont traités un par un pour limiter la RAM.
+
+La VAD `best_vad(train="devtrain")` utilise des modèles entraînés **hors** du sample 90 de dev (pas de fuite) ; ils sont versionnés dans `results/vad_agent/models/`. Le rapport de la VAD est dans `results/vad_agent/rapport.md`.
 
 Sorties dans `results/` :
 
@@ -123,6 +140,62 @@ Sorties dans `results/` :
 
 Les scores agrégés (micro) sont affichés dans le terminal.
 
-## Protocole d'évaluation
+## Autres scripts
 
-Le protocole (métrique, collar, traitement des overlaps, UEM, agrégation) est décrit dans [`docs/choix_techniques.md`](docs/choix_techniques.md).
+Même règle : depuis la racine du dépôt, `.venv` activé. Les paramètres sont en haut de chaque script.
+
+| Commande | Rôle | Fichiers | Sorties |
+|---|---|---|---|
+| `python baseline_oracle.py` | remplace un composant par la vérité terrain (`oracle_vad`, `oracle_k`, `oracle_vote`, un seul à la fois) | dev sample 90 | `results/baseline_oracle_*` |
+| `python nme_sc_experiment.py [--limit N]` | compare p fixe et NME-SC (Laplacien normalisé / non normalisé) sur les mêmes embeddings | dev sample 90 | `results/nme_sc/` |
+| `python ablation.py [--limit N]` | ablation des 2 améliorations (VAD, clustering), 4 configurations, version figée avant exécution (D-62) | **test** sample 90 | `results/ablation/`, rapport : [`docs/rapport-ablation.md`](docs/rapport-ablation.md) |
+| `python pyannote_diarization.py` | pipeline pré-entraînée `pyannote/speaker-diarization-community-1`, même protocole | test sample 90 | `results/pyannote/` |
+| `python vad.py eval --method … --rttm …` | évaluation de la VAD seule (detection error) | dev | `results/vad_agent/` |
+
+Accès au modèle pyannote (une seule fois) : accepter les conditions sur <https://huggingface.co/pyannote/speaker-diarization-community-1>, créer un token en lecture, puis `hf auth login`. Le token est stocké dans `~/.cache/huggingface`, jamais dans le code.
+
+Règle du projet : le dev sert à régler, le test à mesurer. Le test n'est jamais utilisé pour choisir un paramètre.
+
+## Démo
+
+Application Gradio locale : charger un audio (ou enregistrer au micro), lancer la diarisation (baseline ou pyannote), afficher la timeline des locuteurs et leurs temps de parole, écouter les segments, renommer les locuteurs, exporter en RTTM. Si un RTTM de référence est fourni, le DER et le JER sont affichés.
+
+```bash
+source .venv/bin/activate
+python -m demo.app
+```
+
+Puis ouvrir <http://127.0.0.1:7860>. La démo écoute uniquement en local (pas de lien public) et fonctionne sans internet une fois les modèles en cache.
+
+- `WHO_SPOKE_PORT=7870` : autre port ;
+- `WHO_SPOKE_DEVICE=cpu` : forcer pyannote sur CPU.
+
+Formats acceptés : wav et flac directement, les autres (mp3, m4a…) sont convertis par `ffmpeg`. Les fichiers temporaires vont dans `demo/tmp/` (non versionné). La baseline de la démo utilise `best_vad(train="alldev")` (modèles entraînés sur tout le dev). Architecture et rapport : `results/demo_agent/`.
+
+## Tests
+
+```bash
+python -m pytest tests/
+```
+
+## Résultats principaux
+
+Protocole : collar 0, UEM = [0, durée du wav], agrégation micro. Ablation sur le **test sample 90** ([`docs/rapport-ablation.md`](docs/rapport-ablation.md)) :
+
+| Configuration | DER moderne | DER forgiving | JER |
+|---|---|---|---|
+| `energy_vad` + p fixe 0.1 (départ) | 44,31 % | 43,16 % | 77,19 % |
+| `best_vad` + p fixe 0.1 (amélioration n°1) | 36,89 % | 35,40 % | 77,00 % |
+| `energy_vad` + NME-SC (amélioration n°2) | 38,38 % | 36,73 % | 68,47 % |
+| `best_vad` + NME-SC (les deux) | 30,86 % | 28,77 % | 68,38 % |
+
+Plancher « un seul locuteur » sur le même sample : DER moderne 56,7 %. Les autres résultats (dev, oracles, pyannote) sont dans [`docs/etat_du_projet.md`](docs/etat_du_projet.md) et `results/`.
+
+## Documentation
+
+- [`docs/etat_du_projet.md`](docs/etat_du_projet.md) : avancement, pipeline actuel, résultats de référence.
+- [`docs/choix_techniques.md`](docs/choix_techniques.md) : toutes les décisions (D-xx), dont le protocole d'évaluation (métrique, collar, overlaps, UEM, agrégation).
+- [`docs/rapport-ablation.md`](docs/rapport-ablation.md) : ablation des 2 améliorations.
+- [`docs/corpus/`](docs/corpus/) et [`docs/decision_corpus.md`](docs/decision_corpus.md) : fiches des corpus et choix de VoxConverse.
+- [`docs/notes-importantes-et-difficultes.md`](docs/notes-importantes-et-difficultes.md) : difficultés rencontrées.
+- [`docs/utilisation_claude.md`](docs/utilisation_claude.md) : usage de Claude et provenance des fichiers.

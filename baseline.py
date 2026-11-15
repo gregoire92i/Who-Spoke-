@@ -14,7 +14,7 @@ from pyannote.metrics.diarization import DiarizationErrorRate, JaccardErrorRate
 #loading pipeline functions
 from audio_features import load_audio, FFT, energy_vad, compute_mfcc
 from vad import best_vad
-from embeddings import compute_embeddings
+from embeddings import compute_embeddings, compute_pretrained_embeddings
 from clustering import spectral_clustering, nme_spectral_clustering
 from post_treatment import windows_to_annotation
 from metrics_and_sanity_checks import sanity_check1_ref, sanity_check2_1speaker
@@ -34,6 +34,8 @@ n_mfcc = 13
 #embedding
 win_s, hop_s, min_s = 2.0, 1.0, 0.5#fenêtres des embeddings (s)
 stats, drop_c0, mode = "mean_std", False, "segment"
+
+pretrained_embeddings = True#False : statistiques de MFCC ; True : WeSpeaker (pyannote/wespeaker-voxceleb-resnet34-LM) sur les mêmes windows
 oracle = False#True : nombre de locuteurs lu dans le RTTM ; False : eigengap
 min_speakers, max_speakers = 1, 20#bornes de k pour l'eigengap (ignorées si oracle)
 p_neighbors, min_neighbors = 0.02, 5#raffinement : fraction / nombre minimal de voisins gardés par window
@@ -65,13 +67,17 @@ def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size, vad_tr
     D = FFT(audio, frame_size=frame_size, hop_size=hop_size)
     #3 VAD
     vad = best_vad(audio, uri=uri, train=vad_train)# prends directement l'audio car a ses propres parametres de trames 
-    del audio#plus utilisé, on le libère tout de suite pour la ram bb
+    if not pretrained_embeddings:
+        del audio#plus utilisé, on le libère tout de suite pour la ram bb (gardé pour WeSpeaker sinon)
     #4 MFCC
     mfcc = compute_mfcc(D, sr=sr, n_mfcc=n_mfcc)
     del D#la STFT est l'objet le plus lourd (~250 Mo pour 10 min d'audio)
     #5 embeddings par fenêtre glissante
     X, win_segs = compute_embeddings(mfcc, vad, win_s=win_s, hop_s=hop_s, min_s=min_s, stats=stats,
                                      drop_c0=drop_c0, mode=mode, sr=sr, hop_size=hop_size)
+    if pretrained_embeddings:#seul le vecteur de chaque window change : mêmes win_segs
+        X = compute_pretrained_embeddings(audio, win_segs, sr=sr)
+        del audio
     #6 clustering spectral
     if clustering_method == "nme":
         labels, info = nme_spectral_clustering(X, oracle=oracle, n_speakers=n_ref_speakers,
