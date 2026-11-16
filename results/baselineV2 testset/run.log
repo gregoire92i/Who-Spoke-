@@ -1,0 +1,118 @@
+[version figée] variant=mfcc fill_unlabeled=False pretrained_embeddings=False vad_train=devtrain (défaut diarize_file) clustering=nme out=results/baselineV2 testset
+=== Sanity check 1 : référence vs elle-même (attendu : DER = 0) ===
+=== Sanity check 2 : un seul locuteur sur tout le fichier ===
+[1/90] aiqwk | DER 63.2% | k 4 (réf 7) | RTF 0.010
+[2/90] bgvvt | DER 17.1% | k 2 (réf 2) | RTF 0.006
+[3/90] byapz | DER 35.6% | k 1 (réf 15) | RTF 0.004
+[4/90] cadba | DER 61.8% | k 3 (réf 7) | RTF 0.005
+[5/90] cpebh | DER 0.4% | k 1 (réf 1) | RTF 0.007
+[6/90] cqfmj | DER 11.9% | k 2 (réf 4) | RTF 0.004
+[7/90] cwbvu | DER 64.7% | k 7 (réf 10) | RTF 0.004
+[8/90] diysk | DER 64.6% | k 2 (réf 15) | RTF 0.009
+[9/90] duvox | DER 11.3% | k 4 (réf 6) | RTF 0.006
+[10/90] dxbbt | DER 17.3% | k 5 (réf 3) | RTF 0.008
+[11/90] dxokr | DER 6.2% | k 2 (réf 4) | RTF 0.005
+[12/90] dzxut | DER 59.7% | k 3 (réf 8) | RTF 0.004
+[13/90] eddje | DER 71.2% | k 1 (réf 4) | RTF 0.005
+[14/90] eucfa | DER 21.9% | k 2 (réf 4) | RTF 0.005
+[15/90] euqef | DER 72.7% | k 4 (réf 1) | RTF 0.006
+[16/90] ezxso | DER 30.3% | k 6 (réf 10) | RTF 0.005
+[17/90] fqrnu | DER 53.0% | k 6 (réf 4) | RTF 0.004
+[18/90] fxnwf | DER 37.8% | k 2 (réf 3) | RTF 0.004
+[19/90] fzwtp | DER 44.9% | k 8 (réf 11) | RTF 0.004
+[20/90] gcvrb | DER 22.9% | k 1 (réf 2) | RTF 0.007
+[21/90] gfneh | DER 43.2% | k 5 (réf 7) | RTF 0.006
+[22/90] gtjow | DER 8.6% | k 4 (réf 4) | RTF 0.008
+[23/90] gtnjb | DER 12.2% | k 8 (réf 13) | RTF 0.008
+[24/90] gzhwb | DER 42.9% | k 4 (réf 6) | RTF 0.006
+[25/90] hqhrb | DER 25.1% | k 7 (réf 6) | RTF 0.008
+[26/90] ifwki | DER 16.9% | k 2 (réf 2) | RTF 0.007
+[27/90] ikhje | DER 24.1% | k 4 (réf 9) | RTF 0.006
+[28/90] isrps | DER 25.7% | k 7 (réf 7) | RTF 0.005
+[29/90] jbowg | DER 60.8% | k 1 (réf 13) | RTF 0.008
+[30/90] jdrwl | DER 10.7% | k 6 (réf 7) | RTF 0.009
+[31/90] jjkrt | DER 21.1% | k 2 (réf 6) | RTF 0.006
+[32/90] jttar | DER 8.5% | k 1 (réf 7) | RTF 0.007
+[33/90] jzkzt | DER 54.2% | k 1 (réf 11) | RTF 0.008
+[34/90] kmjvh | DER 44.3% | k 7 (réf 8) | RTF 0.005
+[35/90] kpjud | DER 57.8% | k 12 (réf 8) | RTF 0.005
+[36/90] kvkje | DER 18.1% | k 7 (réf 8) | RTF 0.006
+[37/90] ledhe | DER 9.0% | k 2 (réf 3) | RTF 0.006
+[38/90] lkikz | DER 11.0% | k 2 (réf 2) | RTF 0.007
+[39/90] lpola | DER 54.7% | k 1 (réf 3) | RTF 0.006
+[40/90] ltgmz | DER 16.6% | k 2 (réf 2) | RTF 0.004
+[41/90] mbzht | DER 34.7% | k 2 (réf 5) | RTF 0.004
+[42/90] mclsr | DER 54.8% | k 8 (réf 11) | RTF 0.004
+[43/90] mkhie | DER 52.5% | k 1 (réf 12) | RTF 0.008
+[44/90] mqtep | DER 9.4% | k 3 (réf 4) | RTF 0.005
+[45/90] nkqzr | DER 41.2% | k 7 (réf 11) | RTF 0.006
+[46/90] nqcpi | DER 37.4% | k 4 (réf 7) | RTF 0.005
+[47/90] nqyqm | DER 22.6% | k 4 (réf 8) | RTF 0.008
+[48/90] ocfop | DER 16.4% | k 2 (réf 2) | RTF 0.009
+[49/90] ofbxh | DER 17.7% | k 5 (réf 7) | RTF 0.011
+[50/90] optsn | DER 32.1% | k 3 (réf 9) | RTF 0.009
+[51/90] oubab | DER 29.0% | k 3 (réf 4) | RTF 0.010
+[52/90] ouvtt | DER 41.3% | k 2 (réf 2) | RTF 0.005
+[53/90] pgtkk | DER 82.3% | k 1 (réf 9) | RTF 0.007
+[54/90] pkwrt | DER 51.8% | k 3 (réf 5) | RTF 0.005
+[55/90] pxqme | DER 28.9% | k 2 (réf 1) | RTF 0.009
+[56/90] qajyo | DER 49.5% | k 8 (réf 17) | RTF 0.009
+[57/90] qeejz | DER 85.3% | k 1 (réf 14) | RTF 0.005
+[58/90] rarij | DER 56.1% | k 1 (réf 10) | RTF 0.010
+[59/90] rxulz | DER 54.7% | k 1 (réf 10) | RTF 0.015
+[60/90] sebyw | DER 27.9% | k 4 (réf 7) | RTF 0.009
+[61/90] sfdvy | DER 20.4% | k 2 (réf 1) | RTF 0.005
+[62/90] svxzm | DER 2.1% | k 1 (réf 1) | RTF 0.006
+[63/90] swbnm | DER 15.5% | k 6 (réf 7) | RTF 0.008
+[64/90] sxqvt | DER 19.4% | k 1 (réf 2) | RTF 0.004
+[65/90] tpnyf | DER 23.0% | k 2 (réf 7) | RTF 0.007
+[66/90] tpslg | DER 11.4% | k 4 (réf 5) | RTF 0.006
+[67/90] tvtoe | DER 1.8% | k 2 (réf 3) | RTF 0.009
+[68/90] uevxo | DER 26.4% | k 6 (réf 9) | RTF 0.005
+[69/90] uicid | DER 19.3% | k 1 (réf 1) | RTF 0.005
+[70/90] vdlvr | DER 5.9% | k 4 (réf 4) | RTF 0.010
+[71/90] vgevv | DER 51.9% | k 4 (réf 11) | RTF 0.010
+[72/90] vuewy | DER 21.2% | k 8 (réf 6) | RTF 0.016
+[73/90] vylyk | DER 58.8% | k 1 (réf 3) | RTF 0.004
+[74/90] wcxfk | DER 58.1% | k 1 (réf 3) | RTF 0.004
+[75/90] wemos | DER 70.5% | k 1 (réf 8) | RTF 0.005
+[76/90] wlfsf | DER 22.1% | k 9 (réf 11) | RTF 0.005
+[77/90] wprog | DER 45.8% | k 2 (réf 2) | RTF 0.007
+[78/90] wwvcs | DER 39.5% | k 8 (réf 6) | RTF 0.007
+[79/90] xlyov | DER 2.6% | k 1 (réf 1) | RTF 0.008
+[80/90] xvxwv | DER 7.9% | k 4 (réf 6) | RTF 0.004
+[81/90] ygrip | DER 12.2% | k 2 (réf 7) | RTF 0.007
+[82/90] ylgug | DER 8.4% | k 1 (réf 3) | RTF 0.007
+[83/90] ytmef | DER 5.2% | k 3 (réf 4) | RTF 0.008
+[84/90] ytula | DER 11.3% | k 6 (réf 7) | RTF 0.006
+[85/90] yukhy | DER 57.7% | k 6 (réf 6) | RTF 0.005
+[86/90] yzvon | DER 44.9% | k 4 (réf 5) | RTF 0.006
+[87/90] zedtj | DER 59.7% | k 9 (réf 7) | RTF 0.008
+[88/90] zfzlc | DER 19.4% | k 1 (réf 2) | RTF 0.008
+[89/90] zqidv | DER 51.0% | k 2 (réf 8) | RTF 0.006
+[90/90] zsgto | DER 42.8% | k 3 (réf 5) | RTF 0.008
+
+=== baseline_sample90_seed130 : 90 fichiers, agrégation micro ===
+DER moderne   : 30.77%
+DER forgiving : 28.65%
+JER           : 67.32%
+VAD error     : 5.76%
+RTF global    : 0.007
+Parole VAD sans label : 2.30%
+Parole départagée     : 6.11%
+
+Détail du DER moderne :
+item                             TOTAL
+diarization error rate %     30.765319
+total                     59210.804000
+correct                   42665.175000
+                       %     72.056402
+false alarm                1670.764000
+                       %      2.821722
+missed detection           4072.739000
+                       %      6.878371
+confusion                 12472.890000
+                       %     21.065227
+
+Plancher trivial (1 locuteur) : DER 56.66% | DER forgiving 56.22%
+Baseline vs plancher          : +25.9 points (moderne), +27.6 points (forgiving) (positif = la baseline fait mieux)
