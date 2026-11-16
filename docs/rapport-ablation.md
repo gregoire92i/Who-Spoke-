@@ -3,6 +3,19 @@
 > Rédigé par Claude Code le 14/11/2026, à la demande de Grégoire. Protocole défini par Grégoire et noté dans
 > `docs/choix_techniques.md` (D-62, révision du 14/11/2026) **avant** l'exécution. Résultats recopiés de
 > `results/ablation/ablation_test_sample90_seed130_agregats.csv` et des CSV par fichier du même dossier.
+>
+> Runs sur le test sample 90 documentés dans le dépôt (recensement du 16/11/2026), dans l'ordre :
+> 1. 07/11 : pyannote `speaker-diarization-community-1` (`results/pyannote/`), run comparatif ;
+> 2. 09/11 : baseline V0, avant toute amélioration, à titre informatif ; il a servi au plancher « un seul locuteur »
+>    de 56,7 % (`results/baseline V0 test set/`) ;
+> 3. avant le 14/11 : VAD seule, subagent `vad-tester` (4 consultations selon `docs/etat_du_projet.md` ;
+>    `results/vad_agent/val_*_test90.csv`), runs comparatifs ;
+> 4. 14/11 : ablation des 2 améliorations (`results/ablation/`, `docs/rapport-ablation.md`), run comparatif, version
+>    figée avant l'exécution (D-62) ;
+> 5. 16/11 : baseline V3 (run de Grégoire) et baseline V2 (run de Claude Code), runs informatifs seulement, faits après
+>    le passage aux nouvelles baselines ;
+> 6. 16/11 : baseline V2 + WeSpeaker (run de Claude Code, à la demande de Grégoire, version fixée avant l'exécution),
+>    run comparatif.
 
 ## 1. Objectif
 
@@ -18,7 +31,7 @@ Mesurer l'apport de chacune des 2 améliorations retenues pour le rendu, seule e
 | Élément | Valeur |
 |---|---|
 | Fichiers | **test sample 90** (`samples/test/sample90_seed130.rttm`, audio `data/voxconverse/test/voxconverse_test_wav/`), 90 fichiers, aucun manquant |
-| Consultation du test | **5e consultation** (les 4 premières par le subagent `vad-tester`). Version figée dans `ablation.py` avant l'exécution ; aucun passage préalable sur le dev ; aucun paramètre choisi d'après ce résultat |
+| Consultation du test | run comparatif (voir le recensement des runs sur le test en tête de ce rapport). Version figée dans `ablation.py` avant l'exécution ; aucun passage préalable sur le dev ; aucun paramètre choisi d'après ce résultat |
 | VAD avant / après | `energy_vad(seuil_db=-30, delta_db=0, smooth_frames=1, min_silence=0.5, min_speech=0.25)` / `best_vad(train="alldev")` (modèles entraînés sur les 216 fichiers dev uniquement) |
 | Clustering avant / après | `spectral_clustering(p_neighbors=0.1, min_neighbors=5)` / `nme_spectral_clustering(laplacian="normalized", 30 valeurs de p entre 5 voisins et 25 % des windows)` ; dans les deux cas `min_speakers = 1`, `max_speakers = 20`, embeddings centrés-réduits, KMeans seed 42 |
 | Identique partout | 16 kHz mono ; frames 65 ms / hop 32,5 ms ; 13 MFCC ; windows 2,0 s / hop 1,0 s / min 0,5 s (moyenne + écart-type, mode `segment`) ; post-traitement `windows_to_annotation` |
@@ -125,7 +138,8 @@ Cas extrêmes (DER avant → après) :
   propres caractéristiques.
 - Le choix de `p_neighbors = 0.1` comme référence a été fait par Grégoire avant l'exécution ; avec une autre référence
   (par exemple 0.02), le gain de l'amélioration n°2 serait différent (voir l'expérience sur le dev).
-- Pas de comparaison avec pyannote dans ce rapport (tableau comparatif à faire séparément, mêmes fichiers).
+- Pas de comparaison avec pyannote dans ce rapport : voir le tableau comparatif des approches, sur les mêmes fichiers,
+  dans `docs/rapport-ablation-et-approches.md`.
 
 ## 7. Reproduction et fichiers
 

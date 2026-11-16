@@ -19,8 +19,6 @@ Format d'une entrée :
 - **Justification** : pourquoi on l'a choisi.
 - **Revoir si** : ce qui nous ferait changer d'avis.
 
-Les champs marqués *à compléter* n'ont pas été notés au moment de la décision.
-
 ⚠️ Deux décisions sont **recopiées intégralement** depuis d'autres fichiers :
 
 - D-10, recopiée depuis `docs/decision_corpus.md` ;
@@ -39,7 +37,6 @@ Les champs marqués *à compléter* n'ont pas été notés au moment de la déci
   - VS Code + WSL2 (Ubuntu) en local ;
   - Google Colab.
 - **Décision** : VS Code avec l'extension WSL, sur Ubuntu sous WSL2. Le dépôt est dans le système de fichiers Linux (`~/projets/Who-Spoke-`). Colab reste possible plus tard pour du GPU.
-- **Justification** : *à compléter*
 - **Revoir si** : les besoins en GPU dépassent ce que permet la machine locale.
 
 ### D-02 — Gestion du dépôt : GitHub, authentification par GitHub CLI
@@ -47,13 +44,11 @@ Les champs marqués *à compléter* n'ont pas été notés au moment de la déci
 - **Date** : 26/10/2026
 - **Statut** : actif
 - **Contexte** : il fallait authentifier Git sur GitHub depuis WSL.
-- **Options** : *à compléter*
 - **Décision** :
   - dépôt `gregoire92i/Who-Spoke-`, branche `main` ;
   - authentification via GitHub CLI (`gh`), en HTTPS ;
   - le jeton n'est jamais écrit en clair.
   - Mise à jour du 03/11/2026 : le dépôt est passé en public, et le mentor a été ajouté comme collaborateur.
-- **Justification** : *à compléter*
 
 ### D-03 — Python 3.14 dans un environnement virtuel `.venv`
 
@@ -76,7 +71,6 @@ Les champs marqués *à compléter* n'ont pas été notés au moment de la déci
 - **Contexte** : il fallait vérifier que la pile deep learning s'installe sous Python 3.14, avec le GPU (RTX 3050 Laptop, CUDA visible dans WSL).
 - **Options** :
   - A : installation standard depuis PyPI ;
-  - autres options : *à compléter*.
 - **Décision** : option A. Versions installées dans le `.venv` :
   - torch 2.15.0+cu132 ;
   - pyannote.audio 4.0.7 ;
@@ -321,9 +315,8 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
 - **Options** :
   - recalculer le tirage à chaque exécution avec la seed (D-23) ;
   - sauvegarder les échantillons dans des fichiers RTTM.
-- **Décision** : les deux échantillons, **40 fichiers** et **90 fichiers**, sont sauvegardés au format RTTM. Emplacement : *à préciser*.
+- **Décision** : les deux échantillons, **40 fichiers** et **90 fichiers**, sont sauvegardés au format RTTM. Emplacement : `samples/dev/` et `samples/test/`.
 - **Justification** : reproductibilité du code.
-- **Revoir si** : *à compléter*
 
 ## 4. Protocole d'évaluation
 
@@ -434,7 +427,7 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
 - **Décision** :
   - l'audio est chargé avec librosa, rééchantillonné à 16 kHz en mono ;
   - les enregistrements maison `.m4a` sont d'abord convertis en `.wav` avec ffmpeg.
-- **Justification** : 16 kHz est la fréquence standard des modèles de parole. *Justification détaillée à compléter.*
+- **Justification** : 16 kHz est la fréquence standard des modèles de parole.
 
 ### D-51 — Paramètres STFT de l'exploration
 
@@ -451,7 +444,7 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
   - `librosa.feature.rms` sur le signal ;
   - `librosa.feature.rms(S=...)` en réutilisant la STFT.
 - **Décision** : `librosa.feature.rms(S=...)`. Fonction `energy_vad`, écrite par Grégoire.
-- **Justification** : on réutilise la STFT déjà calculée. *À compléter.*
+- **Justification** : on réutilise la STFT déjà calculée.
 
 ### D-53 — Seuil de la VAD : relatif au maximum du fichier, −30 dB
 
@@ -479,9 +472,8 @@ Dans ces cas, AMI reste l'alternative documentée. Utiliser AMI en corpus second
   - durées minimales implémentées en premier : `Timeline.support(collar=min_silence)`, **puis** suppression des segments < `min_speech` (dans cet ordre) ;
   - hystérésis ajoutée ensuite, comme variante mesurée en ablation ;
   - valeurs des paramètres à fixer par grid search sur le sous-ensemble dev (D-21), avec la detection error (D-35).
-- **Justification** : *à compléter*
 - **Revoir si** : la detection error sur le sous-ensemble dev ne s'améliore pas par rapport à la décision brute, ou si l'hystérésis apporte davantage.
-- **Révision du 14/11/2026 (décision de Grégoire)** : l'hystérésis (avec le lissage de l'énergie) est abandonnée. Elle augmentait le DER, et même mieux adaptée et mieux réglée, son impact attendu restait faible. La référence de la comparaison de l'amélioration n°1 (D-62) est donc `energy_vad` **sans hystérésis** : seuil simple −30 dB (D-53) + durées minimales. Dans le code actuel, cela correspond à `energy_vad(..., delta_db=0, smooth_frames=1)`, car `audio_features.py` active l'hystérésis par défaut (`delta_db = 3.18`, `smooth_frames = 3`). *Chiffres de la hausse du DER à compléter (aucun résultat de l'hystérésis n'est enregistré dans `results/`).*
+- **Révision du 14/11/2026 (décision de Grégoire)** : l'hystérésis (avec le lissage de l'énergie) est abandonnée. Elle augmentait le DER, et même mieux adaptée et mieux réglée, son impact attendu restait faible. La référence de la comparaison de l'amélioration n°1 (D-62) est donc `energy_vad` **sans hystérésis** : seuil simple −30 dB (D-53) + durées minimales. Dans le code actuel, cela correspond à `energy_vad(..., delta_db=0, smooth_frames=1)`, car `audio_features.py` active l'hystérésis par défaut (`delta_db = 3.18`, `smooth_frames = 3`). *Aucun résultat de l'hystérésis n'est enregistré dans `results/`.*
 
 ### D-55 — Embeddings par fenêtre glissante : fenêtre 1,0 s, hop 0,5 s
 
@@ -630,7 +622,7 @@ Décisions prises par Grégoire le 14/11/2026 pour la démo (`demo/`, subagent `
   - export **RTTM uniquement** (pas de JSON) ;
   - pipelines exposés : **baseline + pyannote**, avec un sélecteur, **sans variantes** de la baseline ;
   - fonctions optionnelles a, b, c, d : **oui**, seulement après les fonctions obligatoires testées ; e et f : **non**.
-- **Justification** : *à compléter*. L'énoncé laisse le choix du format (« JSON ou RTTM ») ; le RTTM est le format de toutes les évaluations du projet (D-13).
+- **Justification** : L'énoncé laisse le choix du format (« JSON ou RTTM ») ; le RTTM est le format de toutes les évaluations du projet (D-13).
 - **Revoir si** : l'organisation demande un export JSON, ou si une variante de la baseline devient la version présentée.
 
 ### D-71 — Démo : interface Gradio locale, timeline plotly
@@ -646,7 +638,7 @@ Décisions prises par Grégoire le 14/11/2026 pour la démo (`demo/`, subagent `
   - **Gradio 6.32.0**, servi sur `127.0.0.1` uniquement, **jamais `share=True`**, statistiques d'usage de Gradio **désactivées** ;
   - timeline en **plotly** (7.1.0) ;
   - ressources externes : téléchargement autorisé **seulement** si elles sont stockées localement dans le dépôt, avec une licence qui permet la redistribution, et si la démo n'a **pas besoin d'internet** pour tourner. Au final, aucune n'est utilisée (polices système).
-- **Justification** : *à compléter par Grégoire*. Éléments de la proposition de phase 1 : compatibilité de Gradio 6.32.0 avec Python 3.14 vérifiée par `pip install --dry-run` ; composants prêts pour l'upload, l'audio et les tableaux cliquables ; `share=True` créerait un lien public, ce qui est exclu par D-05.
+- **Justification** : éléments de la proposition de phase 1 : compatibilité de Gradio 6.32.0 avec Python 3.14 vérifiée par `pip install --dry-run` ; composants prêts pour l'upload, l'audio et les tableaux cliquables ; `share=True` créerait un lien public, ce qui est exclu par D-05.
 - **Revoir si** : Gradio pose un problème de compatibilité ou de rendu le jour J.
 
 ### D-72 — Démo : intégration de la baseline par `diarize_file(..., vad_train=...)`, VAD de production
@@ -695,7 +687,6 @@ Décisions prises par Grégoire le 14/11/2026 pour la démo (`demo/`, subagent `
 - **Contexte** : si ses modèles manquent, `best_vad` se réentraîne automatiquement, ce qui exige le cache de caractéristiques du dev (`results/vad_agent/cache/dev/`, non versionné), `samples/dev/all_dev.rttm` et les annotations dev. Les modèles `.pkl` sont versionnés, le cas est donc peu probable.
 - **Options** : erreur explicite qui bloque la baseline / information de l'utilisateur et réentraînement si possible.
 - **Décision** : **pas d'erreur bloquante**. Au démarrage, l'utilisateur est informé qu'un réentraînement est en cours (environ 3 à 5 min) si les prérequis sont présents ; sinon la baseline est désactivée avec la commande pour régénérer le cache, et pyannote reste disponible.
-- **Justification** : *à compléter*.
 - **Revoir si** : le réentraînement prend trop de temps pour une démo, ou si les modèles cessent d'être versionnés.
 
 ### D-76 — Démo : branche dédiée et fichiers ignorés

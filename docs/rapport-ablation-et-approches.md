@@ -1,8 +1,19 @@
 # Comparaison des approches et analyse d'ablation
 
 > Rédigé par Claude Code le 16/11/2026, à la demande de Grégoire. Détail de l'ablation : `docs/rapport-ablation.md`.
-> Consultations du test pour ce document : 6e (baseline V3, run de Grégoire), 7e et 8e (baseline V2 et V2 + WeSpeaker,
-> runs de Claude Code à la demande de Grégoire, versions fixées avant l'exécution, voir section 4).
+>
+> Runs sur le test sample 90 documentés dans le dépôt (recensement du 16/11/2026), dans l'ordre :
+> 1. 07/11 : pyannote `speaker-diarization-community-1` (`results/pyannote/`), run comparatif ;
+> 2. 09/11 : baseline V0, avant toute amélioration, à titre informatif ; il a servi au plancher « un seul locuteur »
+>    de 56,7 % (`results/baseline V0 test set/`) ;
+> 3. avant le 14/11 : VAD seule, subagent `vad-tester` (4 consultations selon `docs/etat_du_projet.md` ;
+>    `results/vad_agent/val_*_test90.csv`), runs comparatifs ;
+> 4. 14/11 : ablation des 2 améliorations (`results/ablation/`, `docs/rapport-ablation.md`), run comparatif, version
+>    figée avant l'exécution (D-62) ;
+> 5. 16/11 : baseline V3 (run de Grégoire) et baseline V2 (run de Claude Code), runs informatifs seulement, faits après
+>    le passage aux nouvelles baselines ;
+> 6. 16/11 : baseline V2 + WeSpeaker (run de Claude Code, à la demande de Grégoire, version fixée avant l'exécution),
+>    run comparatif.
 
 Protocole commun (D-30 à D-37) : `pyannote.metrics`, collar 0, UEM = [0, durée du wav], agrégation micro. DER moderne
 (`skip_overlap=False`) = métrique principale.
@@ -21,7 +32,7 @@ Toutes les lignes portent sur les **mêmes 90 fichiers** et le même protocole.
 | **Baseline V2** : n°1 (`best_vad` `devtrain`) + n°2, stats MFCC | 30,77 % | 28,65 % | 67,32 % | 2,82 % | 6,88 % | 21,07 % | 16,7 / 72,2 / 11,1 % | 0,007 (CPU) |
 | **Baseline V3** : V2 + `fill_unlabeled` | 30,07 % | 27,93 % | 67,04 % | 3,38 % | 5,18 % | 21,51 % | 16,7 / 72,2 / 11,1 % | 0,0081 (CPU) |
 | **Baseline V2 + embeddings pré-entraînés** (WeSpeaker à la place des stats MFCC) | **17,14 %** | **14,26 %** | **43,36 %** | 2,82 % | 6,88 % | 7,44 % | 32,2 / 52,2 / 15,6 % | 0,019 (GPU, non représentatif) |
-| **pyannote** `speaker-diarization-community-1` | **10,69 %** | **9,51 %** | **32,55 %** | n.d. | n.d. | n.d. | 42,2 / 43,3 / 14,4 % | 0,265 (GPU, non représentatif) |
+| **pyannote** `speaker-diarization-community-1` | **10,69 %** | **9,51 %** | **32,55 %** | 3,62 % | 3,58 % | 3,48 % | 42,2 / 43,3 / 14,4 % | 0,265 (GPU, non représentatif) |
 
 Sources :
 - ablation : `results/ablation/ablation_test_sample90_seed130_agregats.csv` ;
@@ -29,18 +40,18 @@ Sources :
 - V3 : `results/baselineV3 testset/` (agrégats recalculés depuis le RTTM avec le protocole complet ; écart max de DER par
   fichier avec le CSV : 8e-05) ;
 - V2 + WeSpeaker : `results/baselineV2 pretrained embeddings testset/` (sortie de `baseline.py`, `run.log`) ;
-- pyannote : `results/pyannote/pyannote_c1_sample90_seed130_par_fichier.csv` (run du 07/11).
+- pyannote : `results/pyannote/pyannote_c1_sample90_seed130.rttm` et `…_par_fichier.csv` (run du 07/11).
 
 Chaque ligne en gras ne diffère de la baseline V2 que par **un seul** changement : `fill_unlabeled` (V3) ou les
 embeddings (V2 + WeSpeaker). La VAD de V2 / V3 / V2 + WeSpeaker est la même (`best_vad(train="devtrain")`, VAD error
 5,76 %) ; FA et missed sont donc identiques entre V2 et V2 + WeSpeaker.
 
-**Note sur la ligne pyannote** : son RTTM (`results/pyannote/pyannote_c1_sample90_seed130.rttm`) est vide (0 octet). Les
-agrégats micro ont été **reconstruits** à partir du CSV par fichier : DER = Σ(DER_i × total_i) / Σ total_i (total_i =
-parole de référence du fichier, calculée avec `DiarizationErrorRate` contre une hypothèse vide, même UEM) ; JER pondéré
-par le nombre de locuteurs de référence. Contrôle : appliquée aux CSV de l'ablation, cette reconstruction redonne
-**exactement** les agrégats officiels (44,31 / 43,16 / 77,19 % et 30,86 / 28,77 / 68,38 %). La décomposition FA / missed /
-confusion n'est pas reconstructible sans RTTM (n.d.). Les RTF GPU sont mesurés sur un GPU bloqué en mode idle : ils ne
+**Note sur la ligne pyannote** : le RTTM de `results/pyannote/` était vide (0 octet). Il a été restauré le 16/11 depuis
+le commit `435fa6c` (où il se trouvait à la racine de `results/`), sans relancer pyannote. Les agrégats et la
+décomposition FA / missed / confusion sont recalculés depuis ce RTTM avec le protocole complet. Contrôle : mêmes 90
+fichiers et mêmes k que le CSV par fichier, écart max de DER par fichier 3e-05 ; la reconstruction pondérée depuis le
+CSV (DER = Σ(DER_i × total_i) / Σ total_i, JER pondéré par le nombre de locuteurs de référence), utilisée avant la
+restauration, donnait les mêmes agrégats (10,69 / 9,51 / 32,55 %). Les RTF GPU sont mesurés sur un GPU bloqué en mode idle : ils ne
 sont pas comparables à ceux de la baseline sur CPU.
 
 **Recouvrement possible des données d'entraînement** (D-40) : `pyannote/segmentation-3.0` (dans community-1) a vu une
@@ -61,7 +72,7 @@ VoxConverse. Les lignes pyannote et V2 + WeSpeaker peuvent donc être optimistes
 - `fill_unlabeled` : petit gain mais régulier (36 fichiers améliorés, 4 dégradés) ; il réduit le missed (6,88 → 5,18 %)
   au prix d'un peu de FA (2,82 → 3,38 %) et de confusion (21,07 → 21,51 %). k inchangé, comme attendu (post-traitement).
 - WeSpeaker : seule la confusion change (21,07 → 7,44 %, divisée par 2,8). Les 10 fichiers les plus améliorés portent
-  40 % du gain.
+  53 % de la baisse du temps d'erreur (contribution au DER micro).
 
 ### Cas d'échec (test sample 90, DER moderne par fichier)
 
@@ -118,8 +129,14 @@ pyannote n'a pas été évalué sur ce sample du dev.
   DER). C'est le levier le plus fort mesuré dans le projet, et il se confirme sur le test.
 - **Pipeline pré-entraîné complet** (pyannote community-1) : segmentation neuronale, gestion de l'overlap et embeddings
   appris. Sur le test, il reste devant la baseline V2 + WeSpeaker (10,69 % contre 17,14 %, 82 fichiers sur 90). L'écart
-  restant porte surtout sur les fichiers à 2-6 locuteurs (section 1) ; FA / missed / confusion de pyannote ne sont pas
-  disponibles pour dire d'où il vient.
+  de DER médian entre V2 + WeSpeaker et pyannote est de 3,5 points pour 1 locuteur, 5,6 pour 2-3, 8,1 pour 4-6 et 7,1
+  pour 7 et plus : il est plus grand à partir de 4 locuteurs, sans classe nettement dominante (section 1).
+  Observé : par rapport à V2 + WeSpeaker, pyannote réduit le missed (6,88 → 3,58 %) et la confusion (7,44 → 3,48 %), au
+  prix d'un peu plus de FA (2,82 → 3,62 %). Ce passage n'est **pas un changement unique** (la VAD, les embeddings, le
+  clustering et la gestion de l'overlap diffèrent tous) : l'écart ne peut pas être attribué à un composant précis.
+  *Hypothèse non vérifiée* : la baisse du missed viendrait en partie de la parole superposée, que pyannote peut
+  attribuer à plusieurs locuteurs alors que notre post-traitement ne donne qu'un label par trame, et des trames de
+  parole sans window, laissées sans label en V2 (« Parole VAD sans label : 2.30% », `run.log` de V2 + WeSpeaker).
 
 ## 3. Analyse d'ablation
 
