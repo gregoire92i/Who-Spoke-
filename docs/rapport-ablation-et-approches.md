@@ -47,21 +47,40 @@ VoxConverse. Les lignes pyannote et « baseline finale » peuvent donc être opt
 - DER médian par fichier selon le nombre de locuteurs de référence (baseline améliorée → pyannote) : 1 loc. (7 fichiers)
   18,5 → 2,1 % ; 2-3 loc. (18) 18,4 → 10,6 % ; 4-6 loc. (23) 22,6 → 8,8 % ; 7 et plus (42) 45,2 → 10,5 %.
 
-## 2. Variantes mesurées sur le dev uniquement (`samples/dev/sample90_seed130.rttm`)
+## 2. Comparaison des approches sur le dev (`samples/dev/sample90_seed130.rttm`, 90 fichiers)
 
-**Non comparables au tableau 1** (autres fichiers ; réglages choisis sur ce même sample). VAD `best_vad(train="devtrain")`,
-sans fuite.
+**Non comparable au tableau 1** : autres fichiers, et réglages choisis sur ce même sample. VAD
+`best_vad(train="devtrain")` (sans fuite), NME-SC, windows 2,0 s / 1,0 s, KMeans seed 42 dans les quatre lignes. Une
+ligne ne diffère de sa voisine que par un seul changement.
 
-| Variante (un changement par rapport à la ligne de référence) | DER moderne | DER forgiving | JER | confusion | Source |
+| Approche | DER moderne | DER forgiving | JER | k exact | RTF |
 |---|---|---|---|---|---|
-| Baseline améliorée (stats MFCC, NME-SC) — référence | 27,39 % | 24,48 % | 54,85 % | 19,46 % | `results/pretrained_emb/`, `results/nme_sc/` |
-| + `fill_unlabeled` (piste 1) | −0,86 point | — | −0,38 point | +0,39 point | `results/confusion_improver/rapport.md` |
-| BEST3 : + `fill_unlabeled` + embeddings enrichis / LDA 20 + re-segmentation | 22,27 % | 19,10 % | 43,40 % | 15,59 % | idem |
-| BEST4 : BEST3 + windows 1,5 s | 20,83 % | 17,66 % | 43,06 % | 14,15 % | idem |
-| Embeddings WeSpeaker à la place des stats MFCC | **14,24 %** | **11,02 %** | **32,08 %** | 6,30 % | `results/pretrained_emb/rapport.md` |
+| Baseline améliorée : stats MFCC (référence) | 27,39 % | 24,48 % | 54,85 % | 43,3 % | 0,0065 (CPU) |
+| + `fill_unlabeled` (trames de parole sans window → label voisin) | 26,53 % | 23,57 % | 54,47 % | 43,3 % | 0,0054 (CPU) |
+| Embeddings pré-entraînés WeSpeaker à la place des stats MFCC | 14,24 % | 11,02 % | 32,08 % | 55,6 % | 0,0186 (GPU, non représentatif) |
+| WeSpeaker + `fill_unlabeled` (= `baseline.py` actuel) | **13,20 %** | **9,93 %** | **31,43 %** | 55,6 % | 0,0191 (GPU probable, non vérifié) |
 
-BEST3 / BEST4 : 48 configurations essayées sur ces fichiers, stabilité vérifiée sur 4 seeds (± 0,1 point) ; non intégrées
-dans `baseline.py` (seul `fill_unlabeled` l'est).
+Sources (CSV par fichier, agrégats micro reconstruits comme en section 1) :
+`results/pretrained_emb/{mfcc_stats,wespeaker}_sample90_seed130_par_fichier.csv`,
+`results/baselineV3 devset/baseline_sample90_seed130_par_fichier.csv`, `results/baseline_sample90_seed130_par_fichier.csv`.
+Les deux premières lignes redonnent les agrégats officiels de `results/pretrained_emb/agregats_sample90_seed130.csv`.
+pyannote n'a pas été évalué sur ce sample du dev.
+
+**Observé**
+- WeSpeaker : −13,15 points de DER et −22,77 points de JER ; seule la confusion change (19,46 → 6,30 %), car la VAD et
+  les windows sont identiques. Le gain est réparti sur beaucoup de fichiers : 55 améliorés, 6 dégradés à plus d'un
+  point (`results/pretrained_emb/rapport.md`).
+- `fill_unlabeled` : −0,86 point de DER avec les MFCC, −1,04 avec WeSpeaker. Le gain est faible mais il apparaît avec les
+  deux types d'embeddings.
+
+**Interprétation — trois familles d'approches**
+- **Baseline classique** (VAD apprise légère + stats MFCC + spectral) : la plus rapide (RTF < 0,01 sur CPU), mais les
+  stats MFCC séparent mal les locuteurs, d'où une forte confusion et un k souvent sous-estimé.
+- **Embeddings pré-entraînés dans notre pipeline** (WeSpeaker) : on garde notre VAD, nos windows et notre clustering, et
+  on ne change que la représentation. La confusion est divisée par 3. C'est le levier le plus fort mesuré dans le projet.
+- **Pipeline pré-entraîné complet** (pyannote community-1) : segmentation neuronale, gestion de l'overlap et embeddings
+  appris. Sur le test, il reste loin devant la baseline améliorée (10,69 % contre 30,86 %). Sa comparaison avec la
+  baseline WeSpeaker reste à faire sur le test (ligne « baseline finale »).
 
 ## 3. Analyse d'ablation
 
@@ -86,8 +105,8 @@ identique (frames, MFCC, windows 2 s / 1 s, `max_speakers` 20, KMeans seed 42, p
 **Limites / hypothèses**
 - Une seule seed KMeans et un seul sample de 90 fichiers : pas d'intervalle de confiance.
 - Le gain de la n°2 dépend de la référence choisie (p = 0.1 ; sur le dev contre p = 0.02, DER −1,7 point mais JER dégradé).
-- Sur le dev, remplacer les stats MFCC par WeSpeaker divise la confusion par 3 (19,46 → 6,30 %) : c'est le levier
-  principal restant. Effet sur le test à confirmer par la ligne « baseline finale ».
+- La confusion restante pointe vers les embeddings : sur le dev, WeSpeaker la divise par 3 (section 2). Effet sur le
+  test à confirmer par la ligne « baseline finale ».
 
 ## 4. Reproduction
 
