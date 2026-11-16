@@ -35,7 +35,7 @@ n_mfcc = 13
 win_s, hop_s, min_s = 2.0, 1.0, 0.5#fenêtres des embeddings (s)
 stats, drop_c0, mode = "mean_std", False, "segment"
 
-pretrained_embeddings = True#False : statistiques de MFCC ; True : WeSpeaker (pyannote/wespeaker-voxceleb-resnet34-LM) sur les mêmes windows
+pretrained_embeddings = False#False : statistiques de MFCC ; True : WeSpeaker (pyannote/wespeaker-voxceleb-resnet34-LM) sur les mêmes windows
 oracle = False#True : nombre de locuteurs lu dans le RTTM ; False : eigengap
 min_speakers, max_speakers = 1, 20#bornes de k pour l'eigengap (ignorées si oracle)
 p_neighbors, min_neighbors = 0.02, 5#raffinement : fraction / nombre minimal de voisins gardés par window
@@ -43,19 +43,20 @@ clustering_method = "nme"#amélioration n°2 : "nme" = NME-SC (p choisi par fich
 nme_max_frac, nme_n_grid = 0.25, 30#NME-SC : grille de p = n_grid entiers entre min_neighbors et max_frac * n_windows
 nme_laplacian = "normalized"#NME-SC : "normalized" (seul le choix de p change) ou "unnormalized" (comme l'article)
 standardize = True#centrage-réduction des embeddings sur le fichier avant le cosinus
+fill_unlabeled = True#post-traitement : trames de parole (VAD) sans window -> label de la trame labellisée la plus proche (confusion-improver, tour 1)
 seed = 42#graine du KMeans (reproductibilité)
 collar = 0.0#D-30 : même collar pour les sanity checks et la baseline
 #test
-# sample_rttm = "samples/test/sample90_seed130.rttm"
-# audio_dir = Path("data/voxconverse/test/voxconverse_test_wav")
-# out_dir = Path("results")
-# run_name = "baseline_sample90_seed130"
-
-#dev -> adjust parameters
-sample_rttm = "samples/dev/sample90_seed130.rttm"
-audio_dir = Path("data/voxconverse/dev/audio")
+sample_rttm = "samples/test/sample90_seed130.rttm"
+audio_dir = Path("data/voxconverse/test/voxconverse_test_wav")
 out_dir = Path("results")
 run_name = "baseline_sample90_seed130"
+
+#dev -> adjust parameters
+# sample_rttm = "samples/dev/sample90_seed130.rttm"
+# audio_dir = Path("data/voxconverse/dev/audio")
+# out_dir = Path("results")
+# run_name = "baseline_sample90_seed130"
 
 
 def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size, vad_train="devtrain", pretrained_embeddings=False):# pretrained_embeddings : False = statistiques de MFCC, True = WeSpeaker ; vad_train : "devtrain" (mesures sur le dev) ou "alldev" (production, utilisé par la démo) ; * force la defintion des parametres à gauche de * dans l'appel de la fonction
@@ -94,13 +95,14 @@ def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size, vad_tr
         raise ValueError(f"clustering_method doit valoir 'nme' ou 'fixe', reçu {clustering_method}")
     #7 fenêtres -> trames -> Annotation
     hyp, post = windows_to_annotation(labels, X, win_segs, vad, n_frames=mfcc.shape[1], uri=uri,
-                                      sr=sr, hop_size=hop_size, return_info=True)
+                                      sr=sr, hop_size=hop_size, return_info=True, fill_unlabeled=fill_unlabeled)
     stats_file = {
         "k_hyp": info["k"],
         "p_neighbors_used": info.get("p"),#NME-SC : nombre de voisins choisi pour ce fichier (None si p fixe)
         "n_windows": len(X),
         "n_speech_frames": post["n_speech"],#trames de parole selon la VAD
-        "n_uncovered": post["n_uncovered"],#trames de parole sans aucune fenêtre (comptées en missed)
+        "n_uncovered": post["n_uncovered"],#trames de parole restées sans label (comptées en missed)
+        "n_filled": post["n_filled"],#trames de parole sans fenêtre remplies par fill_unlabeled
         "n_tie": post["n_tie"],#trames de parole où le départage par window_scores a servi
     }
     return hyp, vad, stats_file

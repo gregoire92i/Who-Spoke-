@@ -1,4 +1,5 @@
 import numpy as np
+import librosa
 from pyannote.core import Segment, Timeline, Annotation
 from embeddings import timeline_to_mask
 #parameters by default
@@ -29,7 +30,8 @@ def window_scores(X, labels, standardize=True):
  
  
 def windows_to_annotation(labels, X, win_segs, vad, n_frames, uri=None, standardize=True,
-                          sr=sr, hop_size=hop_size, return_info=False, ref=None, mapping=None):
+                          sr=sr, hop_size=hop_size, return_info=False, ref=None, mapping=None,
+                          fill_unlabeled=False):
     """Post-traitement option B : labels de fenêtres -> Annotation pyannote (sans lissage).
  
     labels : (n_fenetres,) sortie de spectral_clustering
@@ -39,6 +41,8 @@ def windows_to_annotation(labels, X, win_segs, vad, n_frames, uri=None, standard
     ref, mapping : ORACLE vote (diagnostic), None par défaut = comportement normal.
       ref : Annotation de référence ; mapping : dict {label hyp "spkXX": label ref},
       sortie de DiarizationErrorRate().optimal_mapping(ref, hyp) calculée sur la 1re passe.
+    fill_unlabeled : False par défaut = comportement d'origine (trames de parole sans fenêtre laissées sans label).
+      True : étape 4 ci-dessous (piste 1 du subagent confusion-improver, results/confusion_improver/journal/tour_01.md).
  
     Pour chaque trame de 10 ms :
       1. vote : chaque fenêtre qui couvre la trame vote pour son label ;
@@ -48,13 +52,21 @@ def windows_to_annotation(labels, X, win_segs, vad, n_frames, uri=None, standard
          mais qu'une fenêtre qui couvre la trame porte le bon label, on prend ce label
          (meilleur score si plusieurs) ; sinon la décision normale est gardée ;
       3. masquage : une trame hors VAD ne reçoit aucun label ;
-         une trame de parole couverte par aucune fenêtre non plus (elle comptera en missed).
+         une trame de parole couverte par aucune fenêtre non plus (elle comptera en missed) ;
+      4. remplissage (si fill_unlabeled) : chaque trame de parole sans label reçoit le label de la trame
+         labellisée la plus proche du même segment de VAD (égalité -> la plus à gauche) ; si le segment
+         n'a aucune trame labellisée (segment trop court pour une fenêtre), la plus proche de tout le fichier.
+         Fait après le vote oracle et le masquage : les trames remplies copient le label final (éventuellement
+         corrigé par l'oracle) de leur voisine ; le vote oracle ne s'applique pas à elles (aucune fenêtre ne
+         les couvre) et elles ne comptent pas dans n_oracle_changed. Aucune trame hors VAD n'est remplie.
     Les trames consécutives de même label forment un segment.
  
     Renvoie une Annotation (labels "spk00", "spk01"...) et, si return_info=True, un dict :
       frame_labels (n_frames,) : label par trame, -1 = aucun
       n_speech : trames de parole (VAD)
-      n_uncovered : trames de parole couvertes par aucune fenêtre
+      n_uncovered : trames de parole sans label à la fin (couvertes par aucune fenêtre ; 0 avec fill_unlabeled,
+        sauf fichier sans aucune trame labellisée)
+      n_filled : trames de parole remplies par l'étape 4 (0 si fill_unlabeled=False)
       n_tie : trames de parole où le départage par score a été utilisé
       n_oracle_changed : trames de parole dont le label a été changé par le vote oracle (0 sinon)"""
     labels = np.asarray(labels)
@@ -112,6 +124,27 @@ def windows_to_annotation(labels, X, win_segs, vad, n_frames, uri=None, standard
     if k > 0:
         n_tie = int((tie & mask).sum())
     n_oracle_changed = int((oracle_changed & mask).sum())   # parole uniquement, comme n_tie
+
+    # remplissage : trame de parole sans label -> label de la trame labellisée la plus proche
+    n_filled = 0
+    labeled_all = np.flatnonzero(frame_labels >= 0)
+    if fill_unlabeled and len(labeled_all) > 0:
+        times = librosa.frames_to_time(np.arange(n_frames), sr=sr, hop_length=hop_size)  # comme timeline_to_mask
+        filled = frame_labels.copy()
+        for seg in vad:
+            idx = np.flatnonzero((times >= seg.start) & (times < seg.end))   # trames du segment de VAD
+            unl = idx[frame_labels[idx] < 0]
+            if len(unl) == 0:
+                continue
+            lab = idx[frame_labels[idx] >= 0]
+            src = lab if len(lab) else labeled_all          # priorité au même segment de VAD
+            pos = np.searchsorted(src, unl)
+            left = src[np.clip(pos - 1, 0, len(src) - 1)]
+            right = src[np.clip(pos, 0, len(src) - 1)]
+            nearest = np.where(np.abs(unl - left) <= np.abs(right - unl), left, right)
+            filled[unl] = frame_labels[nearest]
+        n_filled = int(((filled >= 0) & (frame_labels < 0)).sum())
+        frame_labels = filled
  
     # trames consécutives de même label -> segments
     # change[i] = True si le label change entre la trame i-1 et la trame i
@@ -127,6 +160,7 @@ def windows_to_annotation(labels, X, win_segs, vad, n_frames, uri=None, standard
                 "n_speech": int(mask.sum()),
                 "n_uncovered": int((mask & (frame_labels == -1)).sum()),
                 "n_tie": n_tie,
-                "n_oracle_changed": n_oracle_changed}
+                "n_oracle_changed": n_oracle_changed,
+                "n_filled": n_filled}
         return annotation, info
     return annotation

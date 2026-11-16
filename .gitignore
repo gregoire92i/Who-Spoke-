@@ -45,3 +45,7 @@ demo/tmp/
 experiments/confusion_improver/
 figures/confusion_improver/
 results/confusion_improver/
+
+#agent project-verifier : ses sorties restent locales (audit, journal, checklist, fichiers mis de côté)
+results/project_verifier/
+_to_delete/

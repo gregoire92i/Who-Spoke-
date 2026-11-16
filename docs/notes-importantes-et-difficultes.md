@@ -259,3 +259,9 @@ observations : le locuteur dominant est découpé : il occupe 2,96 clusters en m
 - Interprétation : sur les fichiers courts, les étapes linéaires (chargement, STFT, MFCC, VAD, embeddings) dominent ; le terme cubique ne prend le dessus que sur les fichiers longs, d'où un RTF qui croît avec la durée. Le surcoût du 1er appel vient du chargement des bibliothèques / modèles au premier usage (la démo ne chauffe que `best_vad` au démarrage, pas toute la chaîne).
 - Non vérifié : temps par étape (pas de profilage) ; fichier exact sur lequel la démo affichait 0,014.
 - À surveiller : un enregistrement d'1 h (≈ 3 600 windows) donnerait des décompositions ≈ 30 fois plus lourdes que sur ldnro.
+
+
+## CLUSTERING : la normalisation du laplacien fait grimper le DER mais chuter le JER
+
+faits : perte de 1,4% sur le DER, gain sur le JER
+hypotheses : ? 

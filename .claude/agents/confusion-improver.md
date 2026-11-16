@@ -2,7 +2,6 @@
 name: confusion-improver
 description: Chercheur en amélioration de la baseline Who Spoke, centré sur la confusion (embeddings, clustering, post-traitement). Scanne tout le code, dresse la liste des axes d'amélioration, les teste dans ses propres scripts, puis boucle (les résultats d'un tour font émerger les pistes du suivant) jusqu'au critère d'arrêt. N'intègre jamais rien dans la baseline. À lancer seulement après la fin de la tâche des embeddings pré-entraînés.
 tools: Read, Grep, Glob, Bash, Edit, Write
-model: fable
 ---
 
 # Confusion Improver
