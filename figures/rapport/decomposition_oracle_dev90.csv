@@ -1,0 +1,5 @@
+configuration,DER,DER_forgiving,JER,FA,missed,confusion
+Baseline du 11/11 (aucun oracle),33.4918,31.1208,63.8734,4.1682,7.7697,21.5539
+VAD oracle,28.6679,25.9919,61.1256,0.0263,6.8714,21.7703
+vote oracle,31.6326,29.2667,62.3662,4.1681,7.7696,19.6950
+k oracle,38.7554,36.2888,55.8858,4.1691,7.7708,26.8155

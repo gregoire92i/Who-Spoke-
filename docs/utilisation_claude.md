@@ -141,7 +141,7 @@ Légende :
 | `energy_vad` | G | en cours |
 | `baseline.py` | G + C | argument `vad_train` de `diarize_file` ajouté par Claude Code (14/11), à la demande de G ; paramètre `pretrained_embeddings` et branchement WeSpeaker dans `diarize_file` ajoutés par Claude Code (15/11), à la demande de G |
 | `embeddings.py` | G + C | `load_pretrained_model`, `compute_pretrained_embeddings`, `WESPEAKER_ID` ajoutés par Claude Code (15/11), à la demande de G (`results/pretrained_emb/rapport.md`) ; reste du fichier : C |
-| `post_treatment.py` | G + C | option `fill_unlabeled` : piste proposée et testée par le subagent `confusion-improver` ; reste du fichier : *à préciser par G* |
+| `post_treatment.py` | C | option `fill_unlabeled` : piste proposée et testée par le subagent `confusion-improver` ; reste du fichier : C |
 | `pretrained_embeddings_experiment.py` | C | Claude Code (15/11), à la demande de G : WeSpeaker vs statistiques de MFCC sur le dev |
 | `rttm_files.py` (suppression de l'import `experimenations`), suppression de `cluster_embedd_vizualizer.py` (fichier vide) | C | subagent `project-verifier` (16/11), validé par G |
 | `results/demo_agent/rtf_tests/scripts/*` | C | subagent `demo-builder` (tests du RTF) |

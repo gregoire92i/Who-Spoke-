@@ -135,8 +135,7 @@ pyannote n'a pas été évalué sur ce sample du dev.
   prix d'un peu plus de FA (2,82 → 3,62 %). Ce passage n'est **pas un changement unique** (la VAD, les embeddings, le
   clustering et la gestion de l'overlap diffèrent tous) : l'écart ne peut pas être attribué à un composant précis.
   *Hypothèse non vérifiée* : la baisse du missed viendrait en partie de la parole superposée, que pyannote peut
-  attribuer à plusieurs locuteurs alors que notre post-traitement ne donne qu'un label par trame, et des trames de
-  parole sans window, laissées sans label en V2 (« Parole VAD sans label : 2.30% », `run.log` de V2 + WeSpeaker).
+  attribuer à plusieurs locuteurs alors que notre post-traitement ne donne qu'un label par trame.
 
 ## 3. Analyse d'ablation
 
