@@ -167,6 +167,19 @@ python -m demo.app
 
 Puis ouvrir <http://127.0.0.1:7860>. La démo écoute uniquement en local (pas de lien public) et fonctionne sans internet une fois les modèles en cache.
 
+**Premier lancement sur une nouvelle machine.** La démo ne télécharge rien (`HF_HUB_OFFLINE=1`, fixé dans `demo/__init__.py`) : elle lit les modèles dans le cache Hugging Face local (`~/.cache/huggingface/hub/`). Il faut donc les télécharger une fois, avec internet :
+
+```bash
+source .venv/bin/activate
+hf auth login                                              # pyannote : voir « Accès au modèle pyannote » plus haut
+hf download pyannote/speaker-diarization-community-1       # pipeline pyannote (conditions à accepter, token requis)
+hf download pyannote/wespeaker-voxceleb-resnet34-LM        # embeddings WeSpeaker de la baseline (sans conditions)
+```
+
+Sans ces modèles, la baseline MFCC reste utilisable (les modèles de `best_vad` sont versionnés dans `results/vad_agent/models/`), mais pyannote est indisponible et le choix WeSpeaker est grisé.
+
+Embeddings de la baseline : choix dans l'interface entre statistiques de MFCC (défaut) et WeSpeaker (`pyannote/wespeaker-voxceleb-resnet34-LM`, entraîné sur VoxCeleb : recouvrement possible de locuteurs avec VoxConverse, D-40).
+
 - `WHO_SPOKE_PORT=7870` : autre port ;
 - `WHO_SPOKE_DEVICE=cpu` : forcer pyannote sur CPU.
 
