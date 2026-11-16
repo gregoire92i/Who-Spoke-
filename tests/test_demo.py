@@ -164,17 +164,73 @@ def test_load_audio_errors(tmp_path):
 
 # ------------------------------------------------------------------ cohérence avec baseline.py
 @needs_dev
+@pytest.mark.parametrize("pretrained", [False, True], ids=["mfcc", "wespeaker"])
 @pytest.mark.parametrize("uri", EQUALITY_FILES)
-def test_adapter_equals_baseline_devtrain(uri):
-    """Avec le même vad_train, la sortie de l'adaptateur est identique à celle de baseline.diarize_file."""
+def test_adapter_equals_baseline_devtrain(uri, pretrained):
+    """Avec le même vad_train et le même choix d'embeddings, la sortie de l'adaptateur est identique à celle de
+    baseline.diarize_file (les deux modes : MFCC et WeSpeaker)."""
     import baseline
     from demo import baseline_adapter
     path = DEV_AUDIO / f"{uri}.wav"
     ref_hyp, _, _ = baseline.diarize_file(path, uri, frame_size=baseline.frame_size, hop_size=baseline.hop_size,
-                                          vad_train="devtrain")
-    hyp, params, _ = baseline_adapter.diarize(path, uri, vad_train="devtrain")
+                                          vad_train="devtrain", pretrained_embeddings=pretrained)
+    hyp, params, extra = baseline_adapter.diarize(path, uri, vad_train="devtrain", pretrained_embeddings=pretrained)
     assert list(hyp.itertracks(yield_label=True)) == list(ref_hyp.itertracks(yield_label=True))
     assert params["VAD"] == "best_vad(train='devtrain')"
+    assert extra["pretrained_embeddings"] is pretrained
+    assert params["embeddings"].startswith("WeSpeaker" if pretrained else "statistiques de MFCC")
+
+
+def test_embeddings_default_is_mfcc():
+    """Défaut de la démo (décision de Grégoire du 16/11) : statistiques de MFCC, y compris par core.diarize."""
+    import inspect
+    from demo import baseline_adapter
+    assert baseline_adapter.DEFAULT_PRETRAINED is False
+    assert inspect.signature(baseline_adapter.diarize).parameters["pretrained_embeddings"].default is False
+    assert inspect.signature(core.diarize).parameters["pretrained_embeddings"].default is False
+    assert baseline_adapter.params()["embeddings"] == "statistiques de MFCC"
+
+
+@needs_dev
+def test_option_reaches_wespeaker(monkeypatch):
+    """Garde-fou : l'option est bien transmise. On espionne baseline.compute_pretrained_embeddings (sans changer son
+    résultat) : appelée 0 fois en mode MFCC, 1 fois en mode WeSpeaker, sur les mêmes windows."""
+    import baseline
+    from demo import baseline_adapter
+    calls = []
+    real = baseline.compute_pretrained_embeddings
+
+    def spy(audio, win_segs, **kw):
+        X = real(audio, win_segs, **kw)
+        calls.append(X.shape)
+        return X
+    monkeypatch.setattr(baseline, "compute_pretrained_embeddings", spy)
+    path = DEV_AUDIO / f"{EQUALITY_FILES[0]}.wav"
+    _, _, ex_m = baseline_adapter.diarize(path, EQUALITY_FILES[0], pretrained_embeddings=False)
+    assert calls == []
+    _, _, ex_w = baseline_adapter.diarize(path, EQUALITY_FILES[0], pretrained_embeddings=True)
+    assert calls == [(ex_w["n_windows"], 256)]
+    assert ex_m["n_windows"] == ex_w["n_windows"]  # mêmes windows dans les deux modes
+
+
+def test_wespeaker_preloaded_offline():
+    """WeSpeaker est préchargé au démarrage, sans réseau (HF_HUB_OFFLINE=1 fixé par demo/__init__.py)."""
+    import embeddings
+    assert os.environ.get("HF_HUB_OFFLINE") == "1"
+    engines = core.Engines(load_pyannote=False, log=lambda m: None)
+    assert engines.wespeaker[0], engines.wespeaker[1]
+    assert any(k[0] == embeddings.WESPEAKER_ID for k in embeddings._pretrained_cache)
+
+
+def test_wespeaker_unavailable_refused():
+    """Si WeSpeaker n'a pas pu être chargé, l'analyse WeSpeaker est refusée avec un message clair (pas de
+    téléchargement ni de bascule silencieuse vers les MFCC)."""
+    engines = core.Engines(load_pyannote=False, load_baseline=False, log=lambda m: None)
+    engines.status["baseline"] = (True, "simulé")
+    engines.wespeaker = (False, "WeSpeaker indisponible : simulé")
+    with pytest.raises(RuntimeError, match="WeSpeaker indisponible"):
+        core.diarize({"pipeline_path": None, "uri": "x", "duration": 1.0}, "baseline", engines,
+                     pretrained_embeddings=True)
 
 
 @needs_dev

@@ -69,7 +69,8 @@ def warmup():
 def nan_check(uri, audio_dir):
     B.pretrained_embeddings = True
     path = audio_dir / f"{uri}.wav"
-    hyp, vad, st = B.diarize_file(path, uri, frame_size=B.frame_size, hop_size=B.hop_size, vad_train="devtrain")
+    hyp, vad, st = B.diarize_file(path, uri, frame_size=B.frame_size, hop_size=B.hop_size, vad_train="devtrain",
+                                  pretrained_embeddings=True)
     segs = _seen.get("pretrained_win_segs", [])
     durs = [s.duration for s in segs]
     print(f"{uri} : durée {sf.info(str(path)).duration:.1f} s, parole VAD {vad.duration():.2f} s, "
@@ -120,7 +121,8 @@ def main():
             _seen.clear()
             t0 = time.perf_counter()
             hyp, vad, st = B.diarize_file(path, uri, n_ref_speakers=n_ref, frame_size=B.frame_size,
-                                          hop_size=B.hop_size, vad_train="devtrain")
+                                          hop_size=B.hop_size, vad_train="devtrain",
+                                          pretrained_embeddings=flag)
             proc = time.perf_counter() - t0
             segs_by_arm[name] = _seen["pretrained_win_segs"] if flag else _seen["mfcc_win_segs"]
             m = metrics[name]

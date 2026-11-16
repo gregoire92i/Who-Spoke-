@@ -112,9 +112,12 @@ class Engines:
         self.status = {}
         self.pyannote = None
         self.device = None
+        self.wespeaker = (False, "baseline non chargée")  # option « embeddings WeSpeaker » de la baseline
         if load_baseline:
             from demo import baseline_adapter
             self.status["baseline"] = baseline_adapter.prepare(log=log)
+            if self.status["baseline"][0]:
+                self.wespeaker = baseline_adapter.WESPEAKER_STATUS
         if load_pyannote:
             from demo import pyannote_adapter
             try:
@@ -131,16 +134,20 @@ class Engines:
         return [p for p in PIPELINES if self.status.get(p, (False,))[0]]
 
 
-def diarize(audio, pipeline, engines):
+def diarize(audio, pipeline, engines, pretrained_embeddings=False):
     """Point d'entrée unique. audio : sortie de load_audio. Renvoie (Annotation, infos).
+    pretrained_embeddings (baseline seulement) : False = statistiques de MFCC (défaut), True = WeSpeaker.
     infos : pipeline, paramètres effectivement utilisés, temps de traitement, durée audio, RTF (D-36).
     Le temps de traitement inclut la lecture du fichier par la pipeline (comme baseline.py), pas load_audio."""
     if pipeline not in engines.available():
         raise RuntimeError(engines.status.get(pipeline, (False, f"pipeline inconnue : {pipeline}"))[1])
+    if pipeline == "baseline" and pretrained_embeddings and not engines.wespeaker[0]:
+        raise RuntimeError(engines.wespeaker[1])
     t0 = time.perf_counter()
     if pipeline == "baseline":
         from demo import baseline_adapter
-        ann, params, extra = baseline_adapter.diarize(audio["pipeline_path"], audio["uri"])
+        ann, params, extra = baseline_adapter.diarize(audio["pipeline_path"], audio["uri"],
+                                                      pretrained_embeddings=pretrained_embeddings)
     else:
         from demo import pyannote_adapter
         ann, params, extra = pyannote_adapter.diarize(engines.pyannote, audio["pipeline_path"])

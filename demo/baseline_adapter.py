@@ -1,7 +1,10 @@
 """Baseline dans la démo : appelle baseline.diarize_file tel quel, avec vad_train="alldev" (modèles de production
 de best_vad, entraînés sur les 216 fichiers dev ; cohérent pour des enregistrements inconnus).
 Toutes les autres valeurs (frames, MFCC, windows, NME-SC, max_speakers, seed…) sont lues dans baseline.py :
-aucun paramètre n'est recopié ici."""
+aucun paramètre n'est recopié ici.
+Embeddings : choix MFCC (défaut, DEFAULT_PRETRAINED = False, décision de Grégoire du 16/11) ou WeSpeaker
+(embeddings.compute_pretrained_embeddings), passé explicitement à baseline.diarize_file(pretrained_embeddings=...).
+WeSpeaker est préchargé au démarrage depuis le cache Hugging Face local (HF_HUB_OFFLINE=1, aucun jeton)."""
 from pathlib import Path
 
 
@@ -12,6 +15,11 @@ VAD_TRAIN = "alldev"
 MODELS_DIR = ROOT / "results" / "vad_agent" / "models"
 MODEL_FILES = ("hgb_base+local_s4_trainalldev.pkl", "stack_hgb_base+local_s4_alldev.pkl")
 RETRAIN_CMD = "python vad.py cache --split dev --rttm samples/dev/all_dev.rttm"
+DEFAULT_PRETRAINED = False  # défaut de la démo : statistiques de MFCC
+# D-40 : WeSpeaker est entraîné sur VoxCeleb ; recouvrement possible de locuteurs avec VoxConverse
+D40_NOTE = ("WeSpeaker (pyannote/wespeaker-voxceleb-resnet34-LM) est entraîné sur VoxCeleb : recouvrement possible "
+            "de locuteurs avec VoxConverse (D-40)")
+WESPEAKER_STATUS = (False, "WeSpeaker non chargé")  # mis à jour par prepare()
 
 
 def check_vad_models():
@@ -59,15 +67,41 @@ def prepare(log=print):
         vad.get_stack_model(train=VAD_TRAIN)  # 2e étage (stack_hgb_base+local_s4_alldev.pkl)
     except Exception as e:
         return False, f"chargement / réentraînement de best_vad impossible : {type(e).__name__}: {e}"
+    prepare_wespeaker(log=log)
     return True, ("baseline prête (réentraînement terminé)" if state == "retrain" else "baseline prête") + \
-        f" ; VAD best_vad(train='{VAD_TRAIN}')"
+        f" ; VAD best_vad(train='{VAD_TRAIN}') ; WeSpeaker " + ("chargé" if WESPEAKER_STATUS[0] else "indisponible")
 
 
-def params():
-    """Paramètres effectivement utilisés, lus dans baseline.py et vad.py (affichage)."""
+def prepare_wespeaker(log=print):
+    """Précharge WeSpeaker UNE fois (embeddings._pretrained_cache), même appareil que compute_pretrained_embeddings
+    (device=None : GPU si disponible). Hors ligne : lu dans le cache HF local. En cas d'échec, la baseline reste
+    disponible avec les MFCC ; seul le choix WeSpeaker est désactivé. Met à jour et renvoie WESPEAKER_STATUS."""
+    global WESPEAKER_STATUS
+    import time
+    try:
+        import embeddings
+        t0 = time.perf_counter()
+        model = embeddings.load_pretrained_model(embeddings.WESPEAKER_ID, None)
+        dev = next(model.parameters()).device
+        WESPEAKER_STATUS = (True, f"WeSpeaker chargé sur {dev} en {time.perf_counter() - t0:.1f} s")
+    except Exception as e:  # modèle absent du cache (pas de réseau)…
+        WESPEAKER_STATUS = (False, f"WeSpeaker indisponible : {type(e).__name__}: {e}")
+    log(f"[baseline] {WESPEAKER_STATUS[1]}")
+    return WESPEAKER_STATUS
+
+
+def embedding_name(pretrained_embeddings):
+    import embeddings
+    return f"WeSpeaker ({embeddings.WESPEAKER_ID})" if pretrained_embeddings else "statistiques de MFCC"
+
+
+def params(pretrained_embeddings=DEFAULT_PRETRAINED):
+    """Paramètres effectivement utilisés, lus dans baseline.py et vad.py (affichage).
+    Avec WeSpeaker, les MFCC servent encore à placer les windows (mêmes win_segs) : n_mfcc / stats restent affichés."""
     import baseline as b
     import vad
     return {"VAD": f"best_vad(train='{VAD_TRAIN}')",
+            "embeddings": embedding_name(pretrained_embeddings),
             "VAD params": {k: v for k, v in vad.PROD_PARAMS.items() if k != "train"},
             "frames / hop (ms)": f"{b.frame_ms} / {b.hop_ms}", "n_mfcc": b.n_mfcc,
             "windows (s)": f"win {b.win_s}, hop {b.hop_s}, min {b.min_s}", "stats": b.stats, "mode": b.mode,
@@ -78,13 +112,15 @@ def params():
             "standardize": b.standardize, "seed": b.seed}
 
 
-def diarize(path, uri, vad_train=VAD_TRAIN):
+def diarize(path, uri, vad_train=VAD_TRAIN, pretrained_embeddings=DEFAULT_PRETRAINED):
     """Un fichier -> (Annotation, paramètres, infos supplémentaires). vad_train n'est changé que par le test
-    d'égalité avec baseline.diarize_file (tests/test_demo.py)."""
+    d'égalité avec baseline.diarize_file (tests/test_demo.py). pretrained_embeddings est passé explicitement."""
     import baseline as b
+    pretrained_embeddings = bool(pretrained_embeddings)
     hyp, vad_tl, stats_file = b.diarize_file(Path(path), uri, frame_size=b.frame_size, hop_size=b.hop_size,
-                                             vad_train=vad_train)
-    p = params()
+                                             vad_train=vad_train, pretrained_embeddings=pretrained_embeddings)
+    p = params(pretrained_embeddings)
     p["VAD"] = f"best_vad(train='{vad_train}')"
-    extra = {"vad_speech_s": vad_tl.duration(), **{k: stats_file[k] for k in ("p_neighbors_used", "n_windows")}}
+    extra = {"pretrained_embeddings": pretrained_embeddings, "vad_speech_s": vad_tl.duration(),
+             **{k: stats_file[k] for k in ("p_neighbors_used", "n_windows")}}
     return hyp, p, extra

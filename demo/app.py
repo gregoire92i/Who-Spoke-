@@ -19,6 +19,8 @@ from demo import ROOT, TMP_DIR, core, plots
 LABELS = {"baseline": "Baseline (MFCC + NME-SC, best_vad alldev)",
           "pyannote": "pyannote speaker-diarization-community-1"}
 SHORT = {"baseline": "Baseline", "pyannote": "pyannote"}
+PIPE_LABELS = {"baseline": "Baseline (embeddings au choix + NME-SC, best_vad alldev)", "pyannote": LABELS["pyannote"]}
+EMB_CHOICES = [("Statistiques de MFCC (défaut)", "mfcc"), ("WeSpeaker pré-entraîné", "wespeaker")]
 FORMATS = ", ".join(core.AUDIO_EXTENSIONS)
 DEFAULT_PORT = 7860
 CSS_PATH = ROOT / "demo" / "style.css"
@@ -41,6 +43,25 @@ def make_theme():
 
 
 # ------------------------------------------------------------------ mise en forme
+def _wespeaker(infos):
+    return infos["pipeline"] == "baseline" and infos.get("pretrained_embeddings", False)
+
+
+def _label(infos):
+    """Nom long de la pipeline effectivement utilisée (la baseline dépend du choix des embeddings)."""
+    if _wespeaker(infos):
+        return "Baseline (WeSpeaker + NME-SC, best_vad alldev)"
+    return LABELS[infos["pipeline"]]
+
+
+def _short(infos):
+    return "Baseline WeSpeaker" if _wespeaker(infos) else SHORT[infos["pipeline"]]
+
+
+def _file_tag(infos):
+    return "baseline_wespeaker" if _wespeaker(infos) else infos["pipeline"]
+
+
 def _section(step, title, hint=""):
     h = f"<div class='ws-hint'>{hint}</div>" if hint else ""
     return f"<div class='ws-section'><span class='ws-step'>{step}</span>{title}</div>{h}"
@@ -81,8 +102,11 @@ def _info_html(infos, summary, ann):
              _card("RTF", f"{infos['RTF']:.3f}", "temps / durée audio")]
     if "device" in p:
         cards.append(_card("Appareil", html.escape(str(p["device"])), "pyannote"))
-    out = (f"<div class='ws-title'>Résultats : <b>{html.escape(LABELS[infos['pipeline']])}</b></div>"
+    out = (f"<div class='ws-title'>Résultats : <b>{html.escape(_label(infos))}</b></div>"
            f"<div class='ws-cards'>{''.join(cards)}</div>")
+    if _wespeaker(infos):
+        from demo.baseline_adapter import D40_NOTE
+        out += f"<div class='ws-note'>{html.escape(D40_NOTE)}.</div>"
     if infos["k_hyp"] == 0:
         out += ("<div class='ws-warn'><b>Aucune parole détectée</b> : la timeline est vide et le RTTM exporté est vide "
                 "(fichier valide).</div>")
@@ -134,9 +158,9 @@ def _metrics_html(state):
     if ref is None:
         return ""
     rows = ""
-    for p, (ann, _) in state["results"].items():
+    for p, (ann, infos) in state["results"].items():
         m = core.evaluate(ref, ann, state["audio"]["duration"])
-        rows += (f"<tr><td>{SHORT[p]}</td><td><b>{m['DER']:.2%}</b></td><td>{m['DER_forgiving']:.2%}</td>"
+        rows += (f"<tr><td>{_short(infos)}</td><td><b>{m['DER']:.2%}</b></td><td>{m['DER_forgiving']:.2%}</td>"
                  f"<td>{m['JER']:.2%}</td><td>{m['false_alarm']:.2%}</td><td>{m['missed']:.2%}</td>"
                  f"<td>{m['confusion']:.2%}</td></tr>")
     return ("<div class='ws-metrics'><div class='ws-title'><b>Comparaison à la référence fournie</b></div>"
@@ -157,19 +181,20 @@ def _view_outputs(state, view):
     ann, infos = _current(state, view)
     dur = state["audio"]["duration"]
     rows, summary = core.speaker_stats(ann, dur)
-    rttm = core.to_rttm(ann, state["audio"]["uri"], TMP_DIR / "exports" / f"{state['audio']['uri']}_{view}.rttm")
+    rttm = core.to_rttm(ann, state["audio"]["uri"],
+                        TMP_DIR / "exports" / f"{state['audio']['uri']}_{_file_tag(infos)}.rttm")
     names = [[lab, state["names"].get(view, {}).get(lab, "")] for lab in plots.speaker_order(state["results"][view][0])]
     return (_info_html(infos, summary, ann), _stats_df(rows, ann), plots.bars_figure(ann, rows), _seg_df(ann), names,
-            gr.update(value=str(rttm), visible=True, label=f"Télécharger le RTTM ({SHORT[view]})"), None)
+            gr.update(value=str(rttm), visible=True, label=f"Télécharger le RTTM ({_short(infos)})"), None)
 
 
 def _timelines(state):
     figs = []
     for p in core.PIPELINES:
         if p in state["results"]:
-            ann, _ = _current(state, p)
+            ann, infos = _current(state, p)
             figs.append(plots.timeline_figure(ann, state["audio"]["duration"],
-                                              title=f"{SHORT[p]} · {state['audio']['uri']}",
+                                              title=f"{_short(infos)} · {state['audio']['uri']}",
                                               reference=state.get("ref")))
     if len(figs) == 1:
         return figs[0], gr.update(value=None, visible=False)
@@ -184,7 +209,7 @@ def _to_int16(y):
 def build_app(engines):
     available = engines.available()
 
-    def analyse(file_path, mic_path, pipeline, compare, ref_path, progress=gr.Progress()):
+    def analyse(file_path, mic_path, pipeline, emb, compare, ref_path, progress=gr.Progress()):
         t0 = time.perf_counter()
         path = file_path or mic_path
         if not path:
@@ -198,10 +223,12 @@ def build_app(engines):
             audio["uri"] = f"micro_{time.strftime('%Y%m%d_%H%M%S')}"
         todo = [p for p in core.PIPELINES if p in available] if compare else [pipeline]
         state = {"audio": audio, "results": {}, "names": {}, "ref": None}
+        pretrained = emb == "wespeaker"
         for i, p in enumerate(todo):
-            progress(0.05 + 0.9 * i / len(todo), desc=f"Diarisation : {LABELS[p]}")
+            name = _label({"pipeline": p, "pretrained_embeddings": pretrained})
+            progress(0.05 + 0.9 * i / len(todo), desc=f"Diarisation : {name}")
             try:
-                state["results"][p] = core.diarize(audio, p, engines)
+                state["results"][p] = core.diarize(audio, p, engines, pretrained_embeddings=pretrained)
             except Exception as e:  # pas de crash de l'interface : message à l'utilisateur
                 raise gr.Error(f"Échec de {p} : {type(e).__name__}: {e}")
         if ref_path:
@@ -217,7 +244,8 @@ def build_app(engines):
                 + (" · converti en wav 16 kHz mono par ffmpeg" if audio["converted"] else "")
                 + f" · analyse terminée en {elapsed:.1f} s")
         return (state, f"<div class='ws-hint'>{head}</div>", tl1, tl2,
-                gr.update(choices=[(LABELS[p], p) for p in todo], value=view, visible=len(todo) > 1),
+                gr.update(choices=[(_label(state["results"][p][1]), p) for p in todo], value=view,
+                          visible=len(todo) > 1),
                 _metrics_html(state), *_view_outputs(state, view))
 
     def change_view(state, view):
@@ -264,8 +292,13 @@ def build_app(engines):
                         mic_in = gr.Audio(sources=["microphone"], type="filepath", format="wav", show_label=False)
                 with gr.Group():
                     gr.HTML(_section(2, "Analyse"), padding=True)
-                    pipe = gr.Radio([(LABELS[p], p) for p in available], value=available[0] if available else None,
+                    pipe = gr.Radio([(PIPE_LABELS[p], p) for p in available], value=available[0] if available else None,
                                     label="Pipeline")
+                    emb = gr.Radio(EMB_CHOICES, value="mfcc", label="Embeddings de la baseline",
+                                   info=("WeSpeaker : modèle pré-entraîné sur VoxCeleb, mêmes windows ; recouvrement "
+                                         "possible avec VoxConverse (D-40)") if engines.wespeaker[0]
+                                   else engines.wespeaker[1],
+                                   interactive=engines.wespeaker[0], visible="baseline" in available)
                     compare = gr.Checkbox(label="Comparer les deux pipelines", value=False,
                                           interactive=len(available) == 2, visible=len(available) == 2)
                     with gr.Accordion("RTTM de référence (optionnel : DER / JER sur ce fichier)", open=False):
@@ -306,7 +339,7 @@ def build_app(engines):
                     names_btn = gr.Button("Appliquer les noms", variant="secondary")
 
         view_outputs = [info_md, stats_df, bars, seg_df, names_df, rttm_btn, seg_audio]
-        run.click(analyse, inputs=[file_in, mic_in, pipe, compare, ref_in],
+        run.click(analyse, inputs=[file_in, mic_in, pipe, emb, compare, ref_in],
                   outputs=[state, head_md, tl1, tl2, view, metrics_md, *view_outputs])
         view.change(change_view, inputs=[state, view], outputs=view_outputs)
         seg_df.select(play, inputs=[state, view], outputs=seg_audio)

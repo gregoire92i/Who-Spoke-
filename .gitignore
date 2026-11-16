@@ -40,3 +40,8 @@ demo/tmp/
 *.aac
 *.wma
 *.webm
+
+#agent confusion-improver : exclu pour l'instant (en cours d'exploitation, pas intégré à la baseline)
+experiments/confusion_improver/
+figures/confusion_improver/
+results/confusion_improver/

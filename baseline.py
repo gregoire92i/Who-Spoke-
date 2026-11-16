@@ -58,7 +58,7 @@ out_dir = Path("results")
 run_name = "baseline_sample90_seed130"
 
 
-def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size, vad_train="devtrain"):# vad_train : "devtrain" (mesures sur le dev) ou "alldev" (production, utilisé par la démo) ; * force la defintion des parametres à gauche de * dans l'appel de la fonction
+def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size, vad_train="devtrain", pretrained_embeddings=False):# pretrained_embeddings : False = statistiques de MFCC, True = WeSpeaker ; vad_train : "devtrain" (mesures sur le dev) ou "alldev" (production, utilisé par la démo) ; * force la defintion des parametres à gauche de * dans l'appel de la fonction
     """Toute la chaîne sur UN fichier. Les tableaux lourds (audio, STFT, MFCC, matrice d'affinité)
     sont des variables locales : ils sont libérés dès que la fonction se termine pour eviter de staurer la ram"""
     #1 échantillonnage
@@ -149,7 +149,8 @@ def main():
 
             t0 = time.perf_counter()
             hyp, vad, stats_file = diarize_file(path, uri, n_ref_speakers=len(ref.labels()),
-                                       frame_size=frame_size, hop_size=hop_size)
+                                       frame_size=frame_size, hop_size=hop_size,
+                                       pretrained_embeddings=pretrained_embeddings)
             proc_time = time.perf_counter() - t0#chargement compris, évaluation non comprise
 
             row = {

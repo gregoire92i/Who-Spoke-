@@ -141,3 +141,34 @@ de l'agent ne sont pas enregistrés (proposés dans le compte rendu).
 - Hypothèse (non vérifiable ici) : si la 1re analyse de Grégoire affichait 0,013, elle tournait sans doute encore
   avec l'ancienne chauffe ; avec le code actuel la 1re analyse donne ≈ 0,03 sur 13 s.
 - Audio dérivés (scratchpad) supprimés en fin de tâche.
+
+## Option embeddings pré-entraînés dans la démo (16/11) : arrêt avant code, options proposées
+
+- Demande : choix MFCC / WeSpeaker (`compute_pretrained_embeddings`) pour la baseline dans la démo.
+- Constat : `pretrained_embeddings` est une variable globale de `baseline.py` (l. 38), lue dans `diarize_file`, pas
+  un paramètre. Valeur : `True` dans HEAD (c7174d3), `False` dans la copie de travail non committée.
+- Seule voie 100 % `demo/` : modifier temporairement `baseline.pretrained_embeddings` (try/finally) → cas prévu
+  d'arrêt par la consigne ; aucun code modifié, rapport d'options rendu.
+- Vérifications au runtime (scripts dans le scratchpad, supprimés) : modèle
+  `pyannote/wespeaker-voxceleb-resnet34-LM` présent dans le cache HF, chargé hors ligne (`HF_HUB_OFFLINE=1`, `token=False`) ;
+  `torch.cuda.is_available()` = True ; chargement 3,1 s (CPU, 1er) / 0,36 s (GPU) ; 598 windows de 2 s sur signal
+  aléatoire de 10 min : CPU 36,87 s puis 36,25 s ; GPU 9,68 s puis 8,94 s (GPU en mode idle, non représentatif, D-36).
+
+### Suite : implémentation (16/11, après décision de Grégoire)
+
+- Décision reçue (via le coordinateur) : variante de l'option B. `baseline.diarize_file(..., pretrained_embeddings=False)`
+  modifié par le coordinateur (pas par moi) ; défaut qui fait foi pour la démo : **False (MFCC)**.
+- `demo/baseline_adapter.py` : `DEFAULT_PRETRAINED = False`, `D40_NOTE`, `prepare_wespeaker()` (préchargement au
+  démarrage, `load_pretrained_model(WESPEAKER_ID, None)`, hors ligne ; en cas d'échec la baseline MFCC reste
+  disponible), `params(pretrained_embeddings)` avec la clé `embeddings`, `diarize(..., pretrained_embeddings=)` passé
+  explicitement à `baseline.diarize_file` ; `extra["pretrained_embeddings"]`.
+- `demo/core.py` : `Engines.wespeaker` (état du préchargement) ; `diarize(audio, pipeline, engines,
+  pretrained_embeddings=False)` refuse WeSpeaker s'il n'est pas chargé (RuntimeError, pas de bascule silencieuse).
+- `demo/app.py` : radio « Embeddings de la baseline » (MFCC par défaut ; désactivée si WeSpeaker indisponible),
+  libellés dynamiques (`_label`, `_short`) dans le titre, le sélecteur de vue, la timeline, le tableau DER et le
+  bouton RTTM ; fichier exporté `<uri>_baseline_wespeaker.rttm` ; note D-40 sous les résultats WeSpeaker.
+  Le contenu du RTTM ne change pas (format standard, l'URI ne contient pas le pipeline).
+- Tests : 16 → 22 (`22 passed in 14.34s`) ; égalité adaptateur = `baseline.diarize_file` dans les deux modes sur
+  hqyok et tucrg (dev, vad_train="devtrain").
+- Vérification manuelle hqyok (alldev, GPU) : MFCC k=2 RTF 0,02 ; WeSpeaker k=3 RTF 0,0535. Les RTTM d'export
+  `demo/tmp/exports/hqyok_baseline*.rttm` produits par cette vérification ont été supprimés.
