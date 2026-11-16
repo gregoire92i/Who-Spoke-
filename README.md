@@ -13,9 +13,10 @@ Who-Spoke-/
 ├── .gitignore
 ├── CLAUDE.md                     # règles de travail de Claude Code dans le dépôt
 ├── baseline.py                   # point d'entrée : baseline complète sur un sample + évaluation
-├── baseline_oracle.py            # diagnostics oracle (VAD, nombre de locuteurs, vote)
+├── baseline_oracle.py            # diagnostics oracle (VAD, nombre de locuteurs, vote) ; pas à jour (paramètres antérieurs à baseline.py)
 ├── ablation.py                   # ablation des 2 améliorations (test sample 90, version figée)
 ├── nme_sc_experiment.py          # expérience NME-SC (choix de p par fichier) sur le dev
+├── pretrained_embeddings_experiment.py  # embeddings WeSpeaker vs statistiques de MFCC sur le dev
 ├── pyannote_diarization.py       # diarisation avec la pipeline pré-entraînée pyannote
 ├── audio_features.py             # chargement audio, STFT, VAD par énergie, MFCC
 ├── vad.py                        # VAD apprise (vad_stack / best_vad) et évaluation de la VAD seule
@@ -25,7 +26,6 @@ Who-Spoke-/
 ├── baseline_embeddings_tests.py  # balayage de la taille des windows d'embedding
 ├── setting_frames_nd_hop.py      # balayage frame / hop de la STFT
 ├── rttm_files.py                 # statistiques par fichier, tirage des samples
-├── plot_reference.py             # timeline de référence d'un fichier RTTM
 ├── Data_vizualizer.py            # statistiques du corpus, comparaison sample / dev complet
 ├── metrics_and_sanity_checks.py  # sanity checks de la chaîne d'évaluation
 ├── demo/                         # démo Gradio (voir « Démo »)
@@ -47,6 +47,7 @@ Who-Spoke-/
     ├── decision_corpus.md
     ├── choix_techniques.md
     ├── rapport-ablation.md
+    ├── rapport-ablation-et-approches.md
     ├── utilisation_claude.md
     └── notes-importantes-et-difficultes.md
 ```
@@ -146,15 +147,28 @@ Même règle : depuis la racine du dépôt, `.venv` activé. Les paramètres son
 
 | Commande | Rôle | Fichiers | Sorties |
 |---|---|---|---|
-| `python baseline_oracle.py` | remplace un composant par la vérité terrain (`oracle_vad`, `oracle_k`, `oracle_vote`, un seul à la fois) | dev sample 90 | `results/baseline_oracle_*` |
+| `python baseline_oracle.py` | remplace un composant par la vérité terrain (`oracle_vad`, `oracle_k`, `oracle_vote`, un seul à la fois). **Pas à jour** : paramètres antérieurs à ceux de `baseline.py` | dev sample 90 | `results/baseline_oracle_*` (runs existants : `results/oracle mode V0/`) |
 | `python nme_sc_experiment.py [--limit N]` | compare p fixe et NME-SC (Laplacien normalisé / non normalisé) sur les mêmes embeddings | dev sample 90 | `results/nme_sc/` |
 | `python ablation.py [--limit N]` | ablation des 2 améliorations (VAD, clustering), 4 configurations, version figée avant exécution (D-62) | **test** sample 90 | `results/ablation/`, rapport : [`docs/rapport-ablation.md`](docs/rapport-ablation.md) |
-| `python pyannote_diarization.py` | pipeline pré-entraînée `pyannote/speaker-diarization-community-1`, même protocole | test sample 90 | `results/pyannote/` |
+| `python pretrained_embeddings_experiment.py [--limit N]` | embeddings WeSpeaker (`pyannote/wespeaker-voxceleb-resnet34-LM`) vs statistiques de MFCC, mêmes windows, même VAD et même clustering | dev sample 90 | `results/pretrained_emb/` |
+| `python pyannote_diarization.py` | pipeline pré-entraînée `pyannote/speaker-diarization-community-1`, même protocole | test sample 90 | `results/` (run existant : `results/pyannote/`) |
 | `python vad.py eval --method … --rttm …` | évaluation de la VAD seule (detection error) | dev | `results/vad_agent/` |
 
 Accès au modèle pyannote (une seule fois) : accepter les conditions sur <https://huggingface.co/pyannote/speaker-diarization-community-1>, créer un token en lecture, puis `hf auth login`. Le token est stocké dans `~/.cache/huggingface`, jamais dans le code.
 
 Règle du projet : le dev sert à régler, le test à mesurer. Le test n'est jamais utilisé pour choisir un paramètre.
+
+## Modèles pré-entraînés
+
+Informations relevées sur les cartes Hugging Face des modèles le 16/11/2026.
+
+| Modèle | Utilisé par | Licence | Accès | Données d'entraînement (selon la carte) |
+|---|---|---|---|---|
+| `pyannote/speaker-diarization-community-1` | `pyannote_diarization.py`, démo | CC BY 4.0 | conditions à accepter sur Hugging Face, token requis | non précisées sur la carte du pipeline ; il inclut un modèle de segmentation et des embeddings WeSpeaker |
+| `pyannote/segmentation-3.0` | (référence pour le risque de fuite, D-40) | MIT | conditions à accepter sur Hugging Face | ensembles d'entraînement de AISHELL, AliMeeting, AMI, AVA-AVD, DIHARD, Ego4D, MSDWild, REPERE et **VoxConverse** |
+| `pyannote/wespeaker-voxceleb-resnet34-LM` | `embeddings.py` (`compute_pretrained_embeddings`), démo | CC BY 4.0 | sans conditions ni token | VoxCeleb |
+
+Risque de fuite (D-40) : la segmentation de pyannote a vu une partie (non précisée) de VoxConverse ; VoxCeleb peut partager des locuteurs avec VoxConverse (non vérifié). Les résultats de ces modèles sur VoxConverse peuvent donc être optimistes.
 
 ## Démo
 
@@ -202,13 +216,16 @@ Protocole : collar 0, UEM = [0, durée du wav], agrégation micro. Ablation sur 
 | `energy_vad` + NME-SC (amélioration n°2) | 38,38 % | 36,73 % | 68,47 % |
 | `best_vad` + NME-SC (les deux) | 30,86 % | 28,77 % | 68,38 % |
 
-Plancher « un seul locuteur » sur le même sample : DER moderne 56,7 %. Les autres résultats (dev, oracles, pyannote) sont dans [`docs/etat_du_projet.md`](docs/etat_du_projet.md) et `results/`.
+Plancher « un seul locuteur » sur le même sample : DER moderne 56,7 %.
+
+Tableau comparatif des approches (baselines, embeddings pré-entraînés WeSpeaker, pyannote ; DER, DER forgiving, JER, RTF, cas d'échec) et courte analyse d'ablation : [`docs/rapport-ablation-et-approches.md`](docs/rapport-ablation-et-approches.md). Les autres résultats (dev, oracles) sont dans [`docs/etat_du_projet.md`](docs/etat_du_projet.md) et `results/`.
 
 ## Documentation
 
 - [`docs/etat_du_projet.md`](docs/etat_du_projet.md) : avancement, pipeline actuel, résultats de référence.
 - [`docs/choix_techniques.md`](docs/choix_techniques.md) : toutes les décisions (D-xx), dont le protocole d'évaluation (métrique, collar, overlaps, UEM, agrégation).
 - [`docs/rapport-ablation.md`](docs/rapport-ablation.md) : ablation des 2 améliorations.
+- [`docs/rapport-ablation-et-approches.md`](docs/rapport-ablation-et-approches.md) : tableau comparatif des approches et courte analyse d'ablation.
 - [`docs/corpus/`](docs/corpus/) et [`docs/decision_corpus.md`](docs/decision_corpus.md) : fiches des corpus et choix de VoxConverse.
 - [`docs/notes-importantes-et-difficultes.md`](docs/notes-importantes-et-difficultes.md) : difficultés rencontrées.
 - [`docs/utilisation_claude.md`](docs/utilisation_claude.md) : usage de Claude et provenance des fichiers.

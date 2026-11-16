@@ -30,8 +30,8 @@ Environ 64 h d'extraits de vidéos YouTube : débats politiques, plateaux TV, jo
   - **v0.2**, sur la branche `ver0.2` : version antérieure.
   - Il faut noter dans notre protocole la version utilisée (v0.3). C'est aussi celle utilisée par pyannote 3.1 dans ses benchmarks.
 - **Taille** : environ 2,3 Go pour le dev et 5,0 Go pour le test, selon la version parquet Hugging Face `diarizers-community/voxconverse`. **[COMMUNAUTÉ]**
-  - La taille exacte des zip officiels n'a pas été trouvée. **[À VÉRIFIER]**
-  - Les zip sont *a priori* à télécharger en entier, même si on ne garde ensuite que 10 à 15 fichiers. **[À VÉRIFIER]**
+  - Post téléchargement : `voxconverse_dev_wav.zip` = 1 988 647 478 octets (environ 1,9 Gio), `voxconverse_test_wav.zip` = 4 272 764 397 octets (environ 4,0 Gio).
+  - Post téléchargement : les zip se téléchargent en entier (pas d'accès fichier par fichier).
 - **Pas de vidéo** : seul l'audio est publié. La partie visuelle n'a pas encore été diffusée. **[COMMUNAUTÉ]** (AwesomeDiarizationDataset) Pour nous ce n'est pas un problème, puisqu'on travaille en audio seul.
 
 ## 2. Licence
@@ -69,8 +69,8 @@ Environ 64 h d'extraits de vidéos YouTube : débats politiques, plateaux TV, jo
   - La page KAIST dit « plus de 50 heures ».
   - Le rapport VoxSRC 2020 mentionne un test de 310 fichiers et 56 h, qui correspond probablement à une version antérieure à la publication.
 
-  On retient **448 fichiers / environ 64 h pour la version v0.3**. **[À VÉRIFIER : recompter après téléchargement]**
-- Les splits « dev » et « test » sont les noms donnés par les auteurs. Le split dev/validation de notre projet sera construit à partir de ces fichiers et documenté séparément.
+  On retient **448 fichiers / environ 64 h pour la version v0.3**. Post téléchargement : recompté, 216 fichiers dev (20,3 h) et 232 fichiers test (43,5 h), soit 448 fichiers et environ 63,8 h (`figures/voxconverse_file_stats.csv`) ; jusqu'à 20 locuteurs par fichier dans le dev et 21 dans le test.
+- Les splits « dev » et « test » sont les noms donnés par les auteurs. Notre découpage (dev pour régler, test pour mesurer, samples de 40 et 90 fichiers) est construit à partir de ces fichiers et documenté dans `docs/choix_techniques.md` (D-20 à D-25) et `samples/`.
 
 ## 5. Conditions d'enregistrement
 
@@ -113,11 +113,11 @@ Les annotations sont **semi-automatiques**. Une chaîne automatique audio-visuel
 - Les erreurs de regroupement d'identités causent des confusions de locuteurs, la principale source d'erreur.
 - **L'attribution des locuteurs hors-champ** est la principale source de désaccord entre annotateurs.
 
-### Risque de fuite de données (lien avec le split de mercredi)
+### Risque de fuite de données (lien avec notre découpage dev / test)
 
 - **Hypothèse** : des personnalités publiques (des hommes politiques par exemple) pourraient apparaître dans plusieurs vidéos différentes. Un même locuteur pourrait alors se retrouver à la fois dans notre dev et notre validation. **[À VÉRIFIER]**
 - Ce risque n'est mentionné dans aucune source trouvée.
-- Les étiquettes de locuteurs des RTTM sont *a priori* propres à chaque fichier (`spk00`, `spk01`…), ce qui ne permet pas de détecter facilement un même locuteur entre fichiers. **[À VÉRIFIER en ouvrant un RTTM]**
+- Les étiquettes de locuteurs des RTTM sont *a priori* propres à chaque fichier (`spk00`, `spk01`…), ce qui ne permet pas de détecter facilement un même locuteur entre fichiers. Post téléchargement : vérifié, les étiquettes RTTM v0.3 sont locales à chaque fichier (20 étiquettes distinctes dans tout le dev, 21 dans le test ; `docs/notes-importantes-et-difficultes.md`).
 - Pour une approche non supervisée (clustering), ce risque est faible. Il deviendrait important si on entraîne ou adapte un modèle. [Interprétation]
 
 ## 7. Rumeurs et sources communautaires
@@ -140,15 +140,15 @@ Les recherches dans les forums (Reddit, issues GitHub) n'ont **rien donné de su
 
 ## 9. Observations personnelles
 
-> Section à compléter par Grégoire après téléchargement et écoute de quelques fichiers.
+Post téléchargement (reprises de `docs/notes-importantes-et-difficultes.md`) :
 
-- Fichiers téléchargés (ID, split) :
-- Langue(s) entendue(s) :
-- Écoute : la parole est-elle bien couverte par les RTTM ? Les frontières tombent-elles au bon moment ?
-- Rires, musique, applaudissements : comment sont-ils traités dans les RTTM ?
-- Même personnalité dans plusieurs fichiers ?
-- Difficultés rencontrées (téléchargement, format, scripts) :
-- Autres remarques :
+- **Fichiers téléchargés** : les deux archives complètes (dev et test), depuis le miroir KAIST (le site d'Oxford n'était pas disponible pour l'audio), et les annotations v0.3 (`joonson/voxconverse`, branche `master`).
+- **Téléchargement** : long et instable. Le serveur coupe la connexion environ tous les 1 Go : il a fallu relancer `wget -c` de nombreuses fois, environ 4 h au total pour les deux archives. À retenir pour la reproduction : utiliser `wget -c` et vérifier les sommes MD5.
+- **Faux fichiers dans le test** : `find -name "*.wav"` compte 464 fichiers dans le test au lieu de 232. L'archive contient un dossier `__MACOSX/` avec 232 fichiers `._nom.wav` qui ne sont pas des enregistrements (D-12). Seul `voxconverse_test_wav/` est utilisé.
+- **Dev et test différents** : le test a plus de locuteurs par fichier (6,5 contre 4,5 en moyenne) et des fichiers deux fois plus longs (11,3 min contre 5,6 min).
+- **Locuteurs récurrents** : aucune source ne dit si une même personne apparaît dans plusieurs fichiers ; les étiquettes RTTM sont locales à chaque fichier. Question ouverte, vérifiable seulement par comparaison d'embeddings entre fichiers.
+- **Fichiers difficiles** : certains fichiers ont un DER très élevé, même avec le nombre de locuteurs oracle (ex. tucrg, qui semble être un concert). Points communs : musique ou bruit forts, nombreux locuteurs. La VAD par énergie y est inefficace.
+- Langue(s) entendue(s), couverture de la parole par les RTTM, traitement des rires / musique / applaudissements dans les RTTM : aucune observation (pas d'écoute systématique).
 
 ---
 

@@ -47,16 +47,16 @@ fill_unlabeled = True#post-traitement : trames de parole (VAD) sans window -> la
 seed = 42#graine du KMeans (reproductibilité)
 collar = 0.0#D-30 : même collar pour les sanity checks et la baseline
 #test
-sample_rttm = "samples/test/sample90_seed130.rttm"
-audio_dir = Path("data/voxconverse/test/voxconverse_test_wav")
-out_dir = Path("results")
-run_name = "baseline_sample90_seed130"
-
-#dev -> adjust parameters
-# sample_rttm = "samples/dev/sample90_seed130.rttm"
-# audio_dir = Path("data/voxconverse/dev/audio")
+# sample_rttm = "samples/test/sample90_seed130.rttm"
+# audio_dir = Path("data/voxconverse/test/voxconverse_test_wav")
 # out_dir = Path("results")
 # run_name = "baseline_sample90_seed130"
+
+#dev -> adjust parameters
+sample_rttm = "samples/dev/sample90_seed130.rttm"
+audio_dir = Path("data/voxconverse/dev/audio")
+out_dir = Path("results")
+run_name = "baseline_sample90_seed130"
 
 
 def diarize_file(path, uri, n_ref_speakers=None, *, frame_size, hop_size, vad_train="devtrain", pretrained_embeddings=False):# pretrained_embeddings : False = statistiques de MFCC, True = WeSpeaker ; vad_train : "devtrain" (mesures sur le dev) ou "alldev" (production, utilisé par la démo) ; * force la defintion des parametres à gauche de * dans l'appel de la fonction

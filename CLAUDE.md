@@ -39,7 +39,7 @@ Tout le travail se fait sur `main`, y compris les tâches déléguées : pas de 
 - Samples (tirage stratifié emboîté, seed 130, D-22/D-25), lus avec `pyannote.database.util.load_rttm` :
   - `samples/dev/sample90_seed130.rttm` : réglages courants (90 fichiers dev) ;
   - `samples/dev/sample40_seed130.rttm` : ancien réglage de la VAD (non représentatif, D-24) ;
-  - `samples/dev/all_dev.rttm` : tout le dev (confirmation ; créé par le subagent `vad-tester`, peut être absent de `main`) ;
+  - `samples/dev/all_dev.rttm` : tout le dev (confirmation ; créé par le subagent `vad-researcher`, peut être absent de `main`) ;
   - `samples/test/sample90_seed130.rttm` : 90 fichiers test (mesure finale des ablations).
 - **Modèle appris sur nos données** (ex. `vad_stack`) : il ne doit jamais être entraîné sur les fichiers où on l'évalue.
   Un modèle entraîné sur tout le dev n'est évaluable que sur le test.

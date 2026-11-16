@@ -26,7 +26,7 @@ La politique d'utilisation de Claude a évolué en trois phases au cours du proj
 - Claude sert uniquement à apporter de la connaissance : expliquer les notions de diarisation, un domaine que Grégoire ne connaissait pas, et rédiger des fiches explicatives sur les bibliothèques.
 - Raison : Grégoire considère qu'il ne peut pas déléguer à Claude une tâche qu'il ne serait pas capable de réaliser lui-même, sauf s'il s'agit d'une tâche inintéressante, qui n'apporte de valeur ajoutée ni au projet ni à ses connaissances.
 
-#### Phase 2 : délégation de code, sans Claude Code (*date de début à préciser par G*)
+#### Phase 2 : délégation de code, sans Claude Code (04/11/26)
 
 - Grégoire délègue l'écriture de certaines portions de code à Claude, via claude.ai uniquement.
 - Il n'utilise volontairement pas Claude Code : comme il doit copier-coller lui-même le code dans le dépôt, il garde la main sur l'architecture. Cela lui permet de bien la définir et de poser des bases solides.
@@ -133,30 +133,42 @@ Légende :
 
 | Fichier | Provenance | Détail |
 | --- | --- | --- |
-| `experimenations.py` | G | exploration audio, forme d'onde, spectrogramme, visualisation de la VAD |
-| `plot_reference.py` | G | timeline de référence |
+| `experimenations.py` (non versionné dans le dépôt) | G | exploration audio, forme d'onde, spectrogramme, visualisation de la VAD |
+| `plot_reference.py` (non versionné dans le dépôt) | G | timeline de référence |
 | `rttm_files.py` | G + C | `get_representative_files` : G. `get_representative_sample` : écrite par G, corrigée et complétée par C (tirage proportionnel par la méthode des plus grands restes, `random.Random(seed)`) |
-| `Data_vizualizer.py` | *C** **(**non re**lu)* | provenance du bloc `plot_sample_vs_dev` à préciser |
+| `Data_vizualizer.py` | C (non relu) | provenance du bloc `plot_sample_vs_dev` |
 | `metrics_and_sanity_checks.py` | G | sanity checks 1 et 2 |
 | `energy_vad` | G | en cours |
-| `baseline.py` | G + C | argument `vad_train` de `diarize_file` ajouté par Claude Code (14/11), à la demande de G |
+| `baseline.py` | G + C | argument `vad_train` de `diarize_file` ajouté par Claude Code (14/11), à la demande de G ; paramètre `pretrained_embeddings` et branchement WeSpeaker dans `diarize_file` ajoutés par Claude Code (15/11), à la demande de G |
+| `embeddings.py` | G + C | `load_pretrained_model`, `compute_pretrained_embeddings`, `WESPEAKER_ID` ajoutés par Claude Code (15/11), à la demande de G (`results/pretrained_emb/rapport.md`) ; reste du fichier : C |
+| `post_treatment.py` | G + C | option `fill_unlabeled` : piste proposée et testée par le subagent `confusion-improver` ; reste du fichier : *à préciser par G* |
+| `pretrained_embeddings_experiment.py` | C | Claude Code (15/11), à la demande de G : WeSpeaker vs statistiques de MFCC sur le dev |
+| `rttm_files.py` (suppression de l'import `experimenations`), suppression de `cluster_embedd_vizualizer.py` (fichier vide) | C | subagent `project-verifier` (16/11), validé par G |
+| `results/demo_agent/rtf_tests/scripts/*` | C | subagent `demo-builder` (tests du RTF) |
+| `audio_features.py`, `clustering.py` (hors `nme_spectral_clustering`), `baseline_oracle.py`, `pyannote_diarization.py`, `baseline_embeddings_tests.py`, `setting_frames_nd_hop.py` | C | |
 | `vad.py` | G + C | `vad_stack` / `best_vad` : subagent `vad-researcher` (C) ; reste : G |
 | `analysis/clustering_agent/*.py` | C | subagent `clustering-embeddings-analyzer` |
 | `demo/__init__.py`, `demo/core.py`, `demo/baseline_adapter.py`, `demo/pyannote_adapter.py`, `demo/plots.py`, `demo/app.py`, `demo/style.css` | C | subagent `demo-builder`, choix de conception de G (phase 1) |
 | `tests/test_demo.py` | C | subagent `demo-builder` (16 tests) |
 | `.gitignore`, `requirements.txt` | G + C | lignes de la démo (`demo/tmp/`, `.gradio/`, extensions audio) et dépendances pytest / gradio / plotly ajoutées par C avec l'accord de G |
-| `clustering.py` (`nme_spectral_clustering`), `nme_sc_experiment.py`, `ablation.py` | *à préciser par G* | |
+| `clustering.py` (`nme_spectral_clustering`), `nme_sc_experiment.py`, `ablation.py` | C | |
 
 ### Documentation du dépôt
 
 | Fichier | Provenance | Détail |
 | --- | --- | --- |
-| `README.md` | *G** **+** **C* |  |
+| `README.md` | G + C | corrections du 16/11 (liens vers les rapports, scripts, licences des modèles pré-entraînés) : subagent `project-verifier`, validées par G |
 | `docs/corpus/ami.md`, `docs/corpus/voxconverse.md` | C | grille de critères définie par G ; section « Observations personnelles » à compléter par G |
 | `docs/decision_corpus.md` | C | décision et justification de G |
 | `docs/notes-importantes-et-difficultes.md` | G + C | sections marquées « noté par Claude Code » : C |
 | `CLAUDE.md`, `.claude/agents/*.md` | G relu par C | |
 | `docs/rapport-ablation.md` | C | |
+| `docs/rapport-ablation-et-approches.md` | C | Claude Code (16/11), à la demande de G |
+| `docs/sync/*.md` | C | rapports de synchronisation de Claude Code, à la demande de G |
+| `docs/corpus/voxconverse.md`, `docs/corpus/ami.md` (section « Observations personnelles », 16/11) | C | subagent `project-verifier`, d'après `docs/notes-importantes-et-difficultes.md` (G), validé par G |
+| `results/pretrained_emb/` (rapport, CSV, RTTM) | C | Claude Code (15/11), dev uniquement |
+| `results/baselineV2 testset/`, `results/baselineV2 pretrained embeddings testset/` | C | runs de `baseline.py` par Claude Code (16/11), à la demande de G |
+| `results/baselineV3 testset/` | G | run de G (16/11) |
 | `results/vad_agent/rapport.md`, `results/vad_agent/journal.md` | C | subagent `vad-researcher` |
 | `results/diag_k_oracle_vs_eigengap/rapport.md`, `journal.md`, `guide_figures.md` | C | subagent `clustering-embeddings-analyzer` |
 | `results/demo_agent/rapport.md`, `journal.md`, `architecture.md` | C | subagent `demo-builder` |
@@ -169,7 +181,7 @@ Légende :
 | Support | Provenance |
 | --- | --- |
 | Planning semaine 1 | C, validé par G |
-| Rapport intermédiaire — Who Spoke ? | *à préciser par G* |
+| Rapport intermédiaire — Who Spoke ? | C + G |
 | Site « Révisions Who Spoke » | C |
 | Site « Révisions embeddings et clustering » | C |
 | Fiche « Évaluer un système de diarisation (théorie) » | C |

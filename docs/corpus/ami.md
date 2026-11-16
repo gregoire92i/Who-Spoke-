@@ -130,14 +130,7 @@ Les recherches dans les forums (Reddit, issues GitHub) n'ont **rien donné de su
 
 ## 9. Observations personnelles
 
-> Section à compléter par Grégoire après téléchargement et écoute de quelques réunions.
-
-- Réunions téléchargées (ID, flux) :
-- Écoute : la parole est-elle bien couverte par les RTTM ? Les frontières tombent-elles au bon moment ?
-- Pauses internes visibles dans la timeline ?
-- Qualité audio perçue (headset mix vs SDM) :
-- Difficultés rencontrées (téléchargement, format, scripts) :
-- Autres remarques :
+Aucune observation : AMI n'a pas été téléchargé (VoxConverse a été retenu comme corpus principal, voir `docs/decision_corpus.md`).
 
 ---
 

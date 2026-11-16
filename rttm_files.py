@@ -17,7 +17,6 @@ def load_file_annotations(rttm_file):
 
 def load_audios_from_annotation(annotation_, sr, audio_dir, ext=".wav"):
     "takes an annotation of audios in parameters, return a dico_audio[stem]=audio_content"
-    from experimenations import load_audio
 
     # Un Annotation seul -> on le met dans un dict pour traiter les deux cas pareil
     if not isinstance(annotation_, dict):
